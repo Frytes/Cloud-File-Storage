@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: CloudStorage
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cloud_storage
+    username: user
+    password: password
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 10
+      connection-timeout: 30000
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
