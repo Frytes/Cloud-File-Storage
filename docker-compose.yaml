@@ -10,6 +10,7 @@ services:
       POSTGRES_DB: cloud_storage
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
+      TZ: Europe/Moscow
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
@@ -20,8 +21,24 @@ services:
     ports:
       - '6379:6379'
     command: redis-server --protected-mode no
-    labels:
-      org.springframework.boot.ignore: true
+    environment:
+      TZ: Europe/Moscow
+    restart: always
+
+  backend:
+    build: .
+    container_name: cloud-storage-backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cloud_storage
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_SESSION_REDIS_HOST: redis
+      TZ: Europe/Moscow
+    restart: always
 
 volumes:
   postgres_data:
