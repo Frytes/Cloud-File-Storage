@@ -14,5 +14,14 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: always
 
+  redis:
+    image: 'redis:alpine'
+    container_name: cloud_storage_redis
+    ports:
+      - '6379:6379'
+    command: redis-server --protected-mode no
+    labels:
+      org.springframework.boot.ignore: true
+
 volumes:
   postgres_data:
