@@ -43,7 +43,7 @@ jobs:
 
       - name: Deploy to Server
         run: |
-          docker-compose stop backend || true
-          docker-compose rm -f backend || true
-          docker-compose up -d --build backend
+          docker compose stop backend || true
+          docker compose rm -f backend || true
+          docker compose up -d --build backend
           docker image prune -f
