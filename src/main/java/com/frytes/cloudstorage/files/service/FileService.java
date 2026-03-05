@@ -1,45 +1,100 @@
 package com.frytes.cloudstorage.files.service;
 
+import com.frytes.cloudstorage.common.exception.DirectoryReadException;
 import com.frytes.cloudstorage.common.exception.FileUploadException;
+import com.frytes.cloudstorage.common.util.PathUtils;
+import com.frytes.cloudstorage.files.dto.FileDto;
+import io.minio.Result;
+import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FileService {
 
     private final MinioService minioService;
 
-    @SneakyThrows // не забыть убрать
+    public FileDto createDirectory(Long userId, String path) {
+        String processedPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
+        String objectName = PathUtils.buildUserPath(userId, processedPath);
+
+        minioService.createDirectory(objectName);
+
+        return FileDto.builder()
+                .name(PathUtils.getFileNameFromPath(processedPath))
+                .path(path)
+                .size(0L)
+                .type("DIRECTORY")
+                .lastModified(java.time.LocalDateTime.now().toString())
+                .build();
+    }
+
     public void uploadFile(Long userId, String path, MultipartFile file) {
-        String objectName = generateObjectKey(userId, path, file.getOriginalFilename());
         if (file.isEmpty()) {
             throw new FileUploadException("Файл пустой", null);
         }
-        minioService.upload(
-                objectName,
-                file.getInputStream(),
-                file.getContentType()
-        );
+
+        String directoryPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
+        String fullPath = directoryPath + file.getOriginalFilename();
+        String objectName = PathUtils.buildUserPath(userId, fullPath);
+
+        minioService.upload(objectName, getInputStream(file), file.getContentType());
     }
 
-    private String generateObjectKey(Long userId, String path, String filename) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("user-").append(userId).append("-files");
+    public List<FileDto> getAllDirectory(Long userId, String path) {
+        String processedPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
+        String prefix = PathUtils.buildUserPath(userId, processedPath);
 
-        if (path != null && !path.isBlank()) {
-            String cleanPath = path.trim()
-                    .replaceAll("/+", "/")
-                    .replaceAll("^/|/$", "");
+        Iterable<Result<Item>> results = minioService.listObjects(prefix);
+        List<FileDto> files = new ArrayList<>();
 
-            if (!cleanPath.isEmpty()) {
-                sb.append("/").append(cleanPath);
+        for (Result<Item> result : results) {
+            try {
+                Item item = result.get();
+                String objectName = item.objectName();
+
+                if (objectName.equals(prefix)) {
+                    continue;
+                }
+
+                FileDto dto = FileDto.builder()
+                        .name(PathUtils.getFileNameFromPath(objectName))
+                        .size(item.size())
+                        .path(path == null ? "" : path)
+                        .type(item.isDir() ? "DIRECTORY" : "FILE")
+                        .lastModified(formatDate(item))
+                        .build();
+
+                files.add(dto);
+
+            } catch (Exception e) {
+                log.error("Ошибка при чтении файла из MinIO", e);
+                throw new DirectoryReadException("Ошибка чтения списка файлов из хранилища", e);
             }
         }
-        sb.append("/").append(filename);
 
-        return sb.toString();
+        return files;
+    }
+
+    private InputStream getInputStream(MultipartFile file) {
+        try {
+            return file.getInputStream();
+        } catch (IOException e) {
+            throw new FileUploadException("Ошибка чтения загружаемого файла", e);
+        }
+    }
+
+    private String formatDate(Item item) {
+        if (item.isDir()) return "";
+        return item.lastModified() != null ? item.lastModified().toString() : "";
     }
 }

@@ -1,16 +1,16 @@
 package com.frytes.cloudstorage.files.service;
 
+import com.frytes.cloudstorage.common.exception.DirectoryCreationException;
 import com.frytes.cloudstorage.common.exception.FileUploadException;
-import io.minio.BucketExistsArgs;
-import io.minio.MakeBucketArgs;
-import io.minio.MinioClient;
-import io.minio.PutObjectArgs;
+import io.minio.*;
+import io.minio.messages.Item;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
 @Slf4j
@@ -26,6 +26,19 @@ public class MinioService {
     @PostConstruct
     public void init() {
         createBucketIfNotExists(userFilesBucket);
+    }
+    public void createDirectory(String objectName) {
+        try {
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(userFilesBucket)
+                            .object(objectName)
+                            .stream(new ByteArrayInputStream(new byte[0]), 0, -1)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new DirectoryCreationException("Ошибка при создании папки: " + e.getMessage(), e);
+        }
     }
 
     public void upload(String objectName, InputStream inputStream, String contentType) {
@@ -44,6 +57,17 @@ public class MinioService {
             throw new FileUploadException("Ошибка загрузки файла в MinIO: " + e.getMessage(), e);
         }
     }
+
+    public Iterable<Result<Item>> listObjects(String prefix) {
+        ListObjectsArgs args = ListObjectsArgs.builder()
+                .bucket(userFilesBucket)
+                .prefix(prefix)
+                .recursive(false)
+                .build();
+
+        return minioClient.listObjects(args);
+    }
+
     private void createBucketIfNotExists(String bucketName) {
         try {
             boolean found = minioClient.bucketExists(

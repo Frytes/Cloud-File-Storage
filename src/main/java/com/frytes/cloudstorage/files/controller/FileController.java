@@ -20,7 +20,7 @@ public class FileController {
     @PostMapping
     public void uploadFile(
             @RequestParam("path") String path,
-            @RequestParam("file") MultipartFile file,
+            @RequestParam("object") MultipartFile file,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         fileService.uploadFile(user.getId(), path, file);
