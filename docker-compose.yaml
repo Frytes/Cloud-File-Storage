@@ -33,6 +33,7 @@ services:
     depends_on:
       - postgres
       - redis
+      - minio
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cloud_storage
       SPRING_DATA_REDIS_HOST: redis
@@ -54,6 +55,14 @@ services:
       - minio_data:/data
     restart: always
 
+  frontend:
+    build: ./frontend
+    container_name: cloud-storage-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
 volumes:
   postgres_data:
   minio_data:
