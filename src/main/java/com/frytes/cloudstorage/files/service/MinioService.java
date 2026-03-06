@@ -2,6 +2,7 @@ package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.common.exception.DirectoryCreationException;
 import com.frytes.cloudstorage.common.exception.FileUploadException;
+import com.frytes.cloudstorage.common.exception.StorageOperationException;
 import io.minio.*;
 import io.minio.messages.Item;
 import jakarta.annotation.PostConstruct;
@@ -43,7 +44,6 @@ public class MinioService {
 
     public void upload(String objectName, InputStream inputStream, String contentType) {
         try {
-            log.info("Начинаю загрузку файла. Bucket: {}, Object: {}", userFilesBucket, objectName);
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(userFilesBucket)
@@ -52,7 +52,6 @@ public class MinioService {
                             .contentType(contentType)
                             .build()
             );
-            log.info("Файл успешно загружен в MinIO: {}", objectName);
         } catch (Exception e) {
             throw new FileUploadException("Ошибка загрузки файла в MinIO: " + e.getMessage(), e);
         }
@@ -68,6 +67,58 @@ public class MinioService {
         return minioClient.listObjects(args);
     }
 
+    public InputStream getFile(String objectName) {
+        try {
+            return minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(userFilesBucket)
+                            .object(objectName)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new FileUploadException("Ошибка при скачивании файла: " + e.getMessage(), e);
+        }
+    }
+
+
+    public void removeObject(String objectName) {
+        try {
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(userFilesBucket)
+                            .object(objectName)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new StorageOperationException("Ошибка при удалении файла: " + e.getMessage(), e);
+        }
+    }
+
+    public void copyObject(String source, String target) {
+        try {
+            minioClient.copyObject(
+                    CopyObjectArgs.builder()
+                            .bucket(userFilesBucket)
+                            .source(CopySource.builder().bucket(userFilesBucket).object(source).build())
+                            .object(target)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new StorageOperationException("Ошибка копирования файла: " + source, e);
+        }
+    }
+
+
+    public Iterable<Result<Item>> listObjectsRecursive(String prefix) {
+        return minioClient.listObjects(
+                ListObjectsArgs.builder()
+                        .bucket(userFilesBucket)
+                        .prefix(prefix)
+                        .recursive(true)
+                        .build()
+        );
+    }
+
     private void createBucketIfNotExists(String bucketName) {
         try {
             boolean found = minioClient.bucketExists(
@@ -78,9 +129,6 @@ public class MinioService {
                 minioClient.makeBucket(
                         MakeBucketArgs.builder().bucket(bucketName).build()
                 );
-                log.info("Бакет '{}' успешно создан!", bucketName);
-            } else {
-                log.info("Бакет '{}' уже существует.", bucketName);
             }
         } catch (Exception e) {
             log.error("Ошибка при инициализации MinIO: {}", e.getMessage());

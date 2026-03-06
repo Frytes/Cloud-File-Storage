@@ -60,6 +60,15 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED, "Неверное имя пользователя или пароль", request);
     }
 
+    //404
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleResourceNotFound(
+            ResourceNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
     // 409
     @ExceptionHandler(UserAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleUserAlreadyExists(
@@ -67,6 +76,15 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    //500
+    @ExceptionHandler(StorageOperationException.class)
+    public ResponseEntity<ErrorResponse> handleStorageOperation(
+            StorageOperationException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
     }
 
     // 500
@@ -97,7 +115,6 @@ public class GlobalExceptionHandler {
         log.error("Ошибка при создании папки: ", ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
     }
-
 
     // 500
     @ExceptionHandler(DirectoryReadException.class)

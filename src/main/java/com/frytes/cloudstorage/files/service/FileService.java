@@ -2,6 +2,7 @@ package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.common.exception.DirectoryReadException;
 import com.frytes.cloudstorage.common.exception.FileUploadException;
+import com.frytes.cloudstorage.common.exception.StorageOperationException;
 import com.frytes.cloudstorage.common.util.PathUtils;
 import com.frytes.cloudstorage.files.dto.FileDto;
 import io.minio.Result;
@@ -84,6 +85,98 @@ public class FileService {
 
         return files;
     }
+    public InputStream downloadFile(Long userId, String path) {
+        String objectName = PathUtils.buildUserPath(userId, PathUtils.sanitize(path));
+        return minioService.getFile(objectName);
+    }
+
+
+    public void moveObject(Long userId, String fromPath, String toPath) {
+        String source = PathUtils.buildUserPath(userId, PathUtils.sanitize(fromPath));
+        String target = PathUtils.buildUserPath(userId, PathUtils.sanitize(toPath));
+
+        boolean isFolder = fromPath.endsWith("/");
+
+        if (isFolder) {
+            moveFolderRecursively(source, target);
+        } else {
+            minioService.copyObject(source, target);
+            minioService.removeObject(source);
+        }
+    }
+
+    public void deleteObject(Long userId, String path) {
+        String objectName = PathUtils.buildUserPath(userId, PathUtils.sanitize(path));
+        boolean isFolder = path.endsWith("/");
+
+        if (isFolder) {
+            deleteFolderRecursively(objectName);
+        } else {
+            minioService.removeObject(objectName);
+        }
+    }
+
+
+    private void moveFolderRecursively(String sourcePrefix, String targetPrefix) {
+        String src = PathUtils.ensureTrailingSlash(sourcePrefix);
+        String tgt = PathUtils.ensureTrailingSlash(targetPrefix);
+
+        Iterable<Result<Item>> objects = minioService.listObjectsRecursive(src);
+
+        for (Result<Item> result : objects) {
+            try {
+                Item item = result.get();
+                String oldKey = item.objectName();
+                String newKey = oldKey.replaceFirst(src, tgt);
+
+                minioService.copyObject(oldKey, newKey);
+                minioService.removeObject(oldKey);
+            } catch (Exception e) {
+                throw new StorageOperationException("Ошибка при перемещении папки", e);
+            }
+        }
+    }
+
+    public List<FileDto> searchUserFiles(Long userId, String query) {
+        String prefix = PathUtils.buildUserPath(userId, "");
+        Iterable<Result<Item>> results = minioService.listObjectsRecursive(prefix);
+
+        List<FileDto> foundFiles = new ArrayList<>();
+        String lowerQuery = query.toLowerCase();
+
+        for (Result<Item> result : results) {
+            try {
+                Item item = result.get();
+                String objectName = item.objectName();
+                String fileName = PathUtils.getFileNameFromPath(objectName);
+                if (fileName.toLowerCase().contains(lowerQuery)) {
+                    String userPath = objectName.substring(prefix.length());
+                    foundFiles.add(FileDto.builder()
+                            .name(fileName)
+                            .size(item.size())
+                            .path(userPath)
+                            .type(item.isDir() ? "DIRECTORY" : "FILE")
+                            .lastModified(item.lastModified().toString())
+                            .build());
+                }
+            } catch (Exception e) {
+                log.error("Ошибка при поиске", e);
+            }
+        }
+        return foundFiles;
+    }
+
+    private void deleteFolderRecursively(String prefix) {
+        Iterable<Result<Item>> objects = minioService.listObjectsRecursive(prefix);
+        for (Result<Item> result : objects) {
+            try {
+                minioService.removeObject(result.get().objectName());
+            } catch (Exception e) {
+                throw new StorageOperationException("Ошибка при удалении содержимого папки", e);
+            }
+        }
+    }
+
 
     private InputStream getInputStream(MultipartFile file) {
         try {

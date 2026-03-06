@@ -16,7 +16,7 @@ export const sendMoveObject = async (source, target) => {
     const url = `${API_MOVE_FILES}?${params.toString()}`;
 
     const response = await fetch(url, {
-        method: 'GET',
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
@@ -26,11 +26,10 @@ export const sendMoveObject = async (source, target) => {
     console.log("Ответ на запрос о перемещении: ");
     console.log(response);
     if (!response.ok) {
-        console.log("Ошибка со статусом: " + response.status);
-        const error = await response.json();
-        throwSpecifyException(response.status, error);
+            console.log("Ошибка со статусом: " + response.status);
+            const error = await response.json();
+            throwSpecifyException(response.status, error);
+        }
+
+        return;
     }
-
-    return await response.json();
-
-}
