@@ -1,4 +1,4 @@
-name: CI/CD Pipeline (Cloud Build -> Local Deploy)
+name: CI/CD Pipeline (Local Build & Deploy)
 
 on:
   push:
@@ -16,9 +16,6 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
-      - name: Grant execute permission for mvnw
-        run: chmod +x mvnw
 
       - name: Run All Tests
         run: ./mvnw verify
@@ -26,7 +23,6 @@ jobs:
   deploy:
     needs: tests
     runs-on: self-hosted
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -36,10 +32,6 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
-
-      - name: Grant execute permission for mvnw
-        run: chmod +x mvnw
 
       - name: Build JAR (Skip Tests)
         run: ./mvnw clean package -DskipTests
