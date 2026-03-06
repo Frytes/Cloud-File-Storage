@@ -10,6 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class FileDto {
+    public static final String TYPE_DIRECTORY = "DIRECTORY";
+    public static final String TYPE_FILE = "FILE";
+
     private String name;
     private Long size;
     private String type;

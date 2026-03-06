@@ -119,6 +119,19 @@ public class MinioService {
         );
     }
 
+    public StatObjectResponse getMetadata(String objectName) {
+        try {
+            return minioClient.statObject(
+                    StatObjectArgs.builder()
+                            .bucket(userFilesBucket)
+                            .object(objectName)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new StorageOperationException("Ошибка получения метаданных файла: " + e.getMessage(), e);
+        }
+    }
+
     private void createBucketIfNotExists(String bucketName) {
         try {
             boolean found = minioClient.bucketExists(

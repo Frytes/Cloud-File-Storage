@@ -34,22 +34,31 @@ public class FileService {
                 .name(PathUtils.getFileNameFromPath(processedPath))
                 .path(path)
                 .size(0L)
-                .type("DIRECTORY")
+                .type(FileDto.TYPE_DIRECTORY) // Используем константу
                 .lastModified(java.time.LocalDateTime.now().toString())
                 .build();
     }
 
-    public void uploadFile(Long userId, String path, MultipartFile file) {
-        if (file.isEmpty()) {
-            throw new FileUploadException("Файл пустой", null);
-        }
-
+    public void uploadFiles(Long userId, String path, List<MultipartFile> files) {
         String directoryPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
-        String fullPath = directoryPath + file.getOriginalFilename();
-        String objectName = PathUtils.buildUserPath(userId, fullPath);
 
-        minioService.upload(objectName, getInputStream(file), file.getContentType());
+        for (MultipartFile file : files) {
+            if (file.isEmpty()) {
+                continue;
+            }
+
+            String fullPath = directoryPath + file.getOriginalFilename();
+            String objectName = PathUtils.buildUserPath(userId, fullPath);
+
+            try {
+                minioService.upload(objectName, file.getInputStream(), file.getContentType());
+            } catch (IOException e) {
+                log.error("Ошибка при чтении файла: {}", file.getOriginalFilename(), e);
+                throw new FileUploadException("Не удалось прочитать файл " + file.getOriginalFilename(), e);
+            }
+        }
     }
+
 
     public List<FileDto> getAllDirectory(Long userId, String path) {
         String processedPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
@@ -71,7 +80,7 @@ public class FileService {
                         .name(PathUtils.getFileNameFromPath(objectName))
                         .size(item.size())
                         .path(path == null ? "" : path)
-                        .type(item.isDir() ? "DIRECTORY" : "FILE")
+                        .type(item.isDir() ? FileDto.TYPE_DIRECTORY : FileDto.TYPE_FILE) // Константы
                         .lastModified(formatDate(item))
                         .build();
 
@@ -85,11 +94,29 @@ public class FileService {
 
         return files;
     }
+
+    public FileDto getFileInfo(Long userId, String path) {
+        String cleanPath = PathUtils.sanitize(path);
+
+        String objectName = PathUtils.buildUserPath(userId, cleanPath);
+
+        var stat = minioService.getMetadata(objectName);
+
+        boolean isDir = cleanPath.endsWith("/");
+
+        return FileDto.builder()
+                .name(PathUtils.getFileNameFromPath(cleanPath))
+                .path(cleanPath)
+                .size(stat.size())
+                .type(isDir ? FileDto.TYPE_DIRECTORY : FileDto.TYPE_FILE)
+                .lastModified(stat.lastModified().toString())
+                .build();
+    }
+
     public InputStream downloadFile(Long userId, String path) {
         String objectName = PathUtils.buildUserPath(userId, PathUtils.sanitize(path));
         return minioService.getFile(objectName);
     }
-
 
     public void moveObject(Long userId, String fromPath, String toPath) {
         String source = PathUtils.buildUserPath(userId, PathUtils.sanitize(fromPath));
@@ -116,6 +143,35 @@ public class FileService {
         }
     }
 
+    public List<FileDto> searchUserFiles(Long userId, String query) {
+        String prefix = PathUtils.buildUserPath(userId, "");
+        Iterable<Result<Item>> results = minioService.listObjectsRecursive(prefix);
+
+        List<FileDto> foundFiles = new ArrayList<>();
+        String lowerQuery = query.toLowerCase();
+
+        for (Result<Item> result : results) {
+            try {
+                Item item = result.get();
+                String objectName = item.objectName();
+                String fileName = PathUtils.getFileNameFromPath(objectName);
+                if (fileName.toLowerCase().contains(lowerQuery)) {
+                    String userPath = objectName.substring(prefix.length());
+
+                    foundFiles.add(FileDto.builder()
+                            .name(fileName)
+                            .size(item.size())
+                            .path(userPath)
+                            .type(item.isDir() ? FileDto.TYPE_DIRECTORY : FileDto.TYPE_FILE)
+                            .lastModified(item.lastModified().toString())
+                            .build());
+                }
+            } catch (Exception e) {
+                log.error("Ошибка при поиске", e);
+            }
+        }
+        return foundFiles;
+    }
 
     private void moveFolderRecursively(String sourcePrefix, String targetPrefix) {
         String src = PathUtils.ensureTrailingSlash(sourcePrefix);
@@ -137,35 +193,6 @@ public class FileService {
         }
     }
 
-    public List<FileDto> searchUserFiles(Long userId, String query) {
-        String prefix = PathUtils.buildUserPath(userId, "");
-        Iterable<Result<Item>> results = minioService.listObjectsRecursive(prefix);
-
-        List<FileDto> foundFiles = new ArrayList<>();
-        String lowerQuery = query.toLowerCase();
-
-        for (Result<Item> result : results) {
-            try {
-                Item item = result.get();
-                String objectName = item.objectName();
-                String fileName = PathUtils.getFileNameFromPath(objectName);
-                if (fileName.toLowerCase().contains(lowerQuery)) {
-                    String userPath = objectName.substring(prefix.length());
-                    foundFiles.add(FileDto.builder()
-                            .name(fileName)
-                            .size(item.size())
-                            .path(userPath)
-                            .type(item.isDir() ? "DIRECTORY" : "FILE")
-                            .lastModified(item.lastModified().toString())
-                            .build());
-                }
-            } catch (Exception e) {
-                log.error("Ошибка при поиске", e);
-            }
-        }
-        return foundFiles;
-    }
-
     private void deleteFolderRecursively(String prefix) {
         Iterable<Result<Item>> objects = minioService.listObjectsRecursive(prefix);
         for (Result<Item> result : objects) {
@@ -174,15 +201,6 @@ public class FileService {
             } catch (Exception e) {
                 throw new StorageOperationException("Ошибка при удалении содержимого папки", e);
             }
-        }
-    }
-
-
-    private InputStream getInputStream(MultipartFile file) {
-        try {
-            return file.getInputStream();
-        } catch (IOException e) {
-            throw new FileUploadException("Ошибка чтения загружаемого файла", e);
         }
     }
 

@@ -25,6 +25,14 @@ public class FileController {
 
     private final FileService fileService;
 
+    @GetMapping
+    public FileDto getFileInfo(
+            @RequestParam("path") String path,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        return fileService.getFileInfo(user.getId(), path);
+    }
+
     @GetMapping("/search")
     public List<FileDto> searchFiles(
             @RequestParam("query") String query,
@@ -48,14 +56,15 @@ public class FileController {
                 .body(new InputStreamResource(inputStream));
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public void uploadFile(
-            @RequestParam("path") String path,
-            @RequestParam("object") MultipartFile file,
-            @AuthenticationPrincipal CustomUserDetails user
+    public void uploadFiles( // Переименовали для ясности (было uploadFile)
+                             @RequestParam("path") String path,
+                             @RequestParam("object") List<MultipartFile> files,
+                             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        fileService.uploadFile(user.getId(), path, file);
+
+        fileService.uploadFiles(user.getId(), path, files);
     }
 
     @PostMapping("/move")

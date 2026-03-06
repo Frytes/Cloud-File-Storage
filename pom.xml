@@ -11,8 +11,8 @@
 	<groupId>com.example</groupId>
 	<artifactId>demo</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>demo</name>
-	<description>Demo project for Spring Boot</description>
+	<name>Cloud File Storage</name>
+	<description>Cloud File Storage application</description>
 	<url/>
 	<licenses>
 		<license/>
