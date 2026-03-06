@@ -6,7 +6,7 @@ on:
 
 jobs:
   tests:
-    runs-on: self-hosted # Твой локальный раннер
+    runs-on: self-hosted
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -17,9 +17,11 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
+      - name: Grant execute permission for mvnw
+        run: chmod +x mvnw
 
       - name: Run All Tests
-        run: mvn verify
+        run: ./mvnw verify
 
   deploy:
     needs: tests
@@ -36,8 +38,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Grant execute permission for mvnw
+        run: chmod +x mvnw
+
       - name: Build JAR (Skip Tests)
-        run: mvn clean package -DskipTests
+        run: ./mvnw clean package -DskipTests
 
       - name: Docker Compose Up
         run: |
