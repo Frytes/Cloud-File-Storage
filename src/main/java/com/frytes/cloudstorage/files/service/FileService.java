@@ -34,7 +34,7 @@ public class FileService {
                 .name(PathUtils.getFileNameFromPath(processedPath))
                 .path(path)
                 .size(0L)
-                .type(FileDto.TYPE_DIRECTORY) // Используем константу
+                .type(FileDto.TYPE_DIRECTORY)
                 .lastModified(java.time.LocalDateTime.now().toString())
                 .build();
     }
@@ -80,7 +80,7 @@ public class FileService {
                         .name(PathUtils.getFileNameFromPath(objectName))
                         .size(item.size())
                         .path(path == null ? "" : path)
-                        .type(item.isDir() ? FileDto.TYPE_DIRECTORY : FileDto.TYPE_FILE) // Константы
+                        .type(item.isDir() ? FileDto.TYPE_DIRECTORY : FileDto.TYPE_FILE)
                         .lastModified(formatDate(item))
                         .build();
 
