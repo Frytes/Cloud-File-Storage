@@ -30,6 +30,12 @@ public class MinioService {
     @Value("${minio.buckets.temp-archives}")
     private String tempArchivesBucket;
 
+    @Value("${minio.url}")
+    private String internalUrl;
+
+    @Value("${minio.external-url}")
+    private String externalUrl;
+
     @PostConstruct
     public void init() {
         createBucketIfNotExists(userFilesBucket);
@@ -40,7 +46,7 @@ public class MinioService {
 
     public String getPresignedUrl(String objectName) {
         try {
-            return minioClient.getPresignedObjectUrl(
+            String url = minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
                             .bucket(tempArchivesBucket)
@@ -48,6 +54,12 @@ public class MinioService {
                             .expiry(1, TimeUnit.HOURS)
                             .build()
             );
+
+            if (externalUrl != null && !externalUrl.isEmpty() && !externalUrl.equals(internalUrl)) {
+                return url.replace(internalUrl, externalUrl);
+            }
+            return url;
+
         } catch (Exception e) {
             throw new StorageOperationException("Ошибка генерации ссылки: " + e.getMessage(), e);
         }
