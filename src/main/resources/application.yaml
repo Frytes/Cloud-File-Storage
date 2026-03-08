@@ -44,3 +44,4 @@ minio:
   secret-key: minioadmin
   buckets:
     user-files: user-files
+    temp-archives: temp-archives

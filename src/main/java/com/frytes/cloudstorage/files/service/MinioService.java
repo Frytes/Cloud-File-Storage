@@ -4,7 +4,7 @@ import com.frytes.cloudstorage.common.exception.DirectoryCreationException;
 import com.frytes.cloudstorage.common.exception.FileUploadException;
 import com.frytes.cloudstorage.common.exception.StorageOperationException;
 import io.minio.*;
-import io.minio.messages.Item;
+import io.minio.messages.*;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -24,10 +25,37 @@ public class MinioService {
     @Value("${minio.buckets.user-files}")
     private String userFilesBucket;
 
+    @Value("${minio.buckets.temp-archives}")
+    private String tempArchivesBucket;
+
     @PostConstruct
     public void init() {
         createBucketIfNotExists(userFilesBucket);
+        createBucketIfNotExists(tempArchivesBucket);
+
+        configureLifecyclePolicy(tempArchivesBucket);
     }
+
+    private void createBucketIfNotExists(String bucketName) {
+        try {
+            boolean found = minioClient.bucketExists(
+                    BucketExistsArgs.builder().bucket(bucketName).build()
+            );
+
+            if (!found) {
+                minioClient.makeBucket(
+                        MakeBucketArgs.builder().bucket(bucketName).build()
+                );
+                log.info("Бакет успешно создан: {}", bucketName);
+            } else {
+                log.info("Бакет уже существует: {}", bucketName);
+            }
+        } catch (Exception e) {
+            log.error("Критическая ошибка при инициализации MinIO бакета {}: {}", bucketName, e.getMessage());
+
+        }
+    }
+
     public void createDirectory(String objectName) {
         try {
             minioClient.putObject(
@@ -42,18 +70,33 @@ public class MinioService {
         }
     }
 
-    public void upload(String objectName, InputStream inputStream, String contentType) {
+     public void upload(String objectName, InputStream inputStream, String contentType) {
         try {
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(userFilesBucket)
                             .object(objectName)
-                            .stream(inputStream, -1, 10485760)
+                            .stream(inputStream, -1, 10485760) // Part size 10MB
                             .contentType(contentType)
                             .build()
             );
         } catch (Exception e) {
             throw new FileUploadException("Ошибка загрузки файла в MinIO: " + e.getMessage(), e);
+        }
+    }
+
+    public void uploadArchive(String objectName, InputStream inputStream) {
+        try {
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(tempArchivesBucket)
+                            .object(objectName)
+                            .stream(inputStream, -1, 10485760)
+                            .contentType("application/zip")
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new FileUploadException("Ошибка сохранения архива в temp-archives: " + e.getMessage(), e);
         }
     }
 
@@ -65,6 +108,16 @@ public class MinioService {
                 .build();
 
         return minioClient.listObjects(args);
+    }
+
+    public Iterable<Result<Item>> listObjectsRecursive(String prefix) {
+        return minioClient.listObjects(
+                ListObjectsArgs.builder()
+                        .bucket(userFilesBucket)
+                        .prefix(prefix)
+                        .recursive(true)
+                        .build()
+        );
     }
 
     public InputStream getFile(String objectName) {
@@ -80,7 +133,6 @@ public class MinioService {
         }
     }
 
-
     public void removeObject(String objectName) {
         try {
             minioClient.removeObject(
@@ -94,7 +146,7 @@ public class MinioService {
         }
     }
 
-    public void copyObject(String source, String target) {
+     public void copyObject(String source, String target) {
         try {
             minioClient.copyObject(
                     CopyObjectArgs.builder()
@@ -106,17 +158,6 @@ public class MinioService {
         } catch (Exception e) {
             throw new StorageOperationException("Ошибка копирования файла: " + source, e);
         }
-    }
-
-
-    public Iterable<Result<Item>> listObjectsRecursive(String prefix) {
-        return minioClient.listObjects(
-                ListObjectsArgs.builder()
-                        .bucket(userFilesBucket)
-                        .prefix(prefix)
-                        .recursive(true)
-                        .build()
-        );
     }
 
     public StatObjectResponse getMetadata(String objectName) {
@@ -132,19 +173,31 @@ public class MinioService {
         }
     }
 
-    private void createBucketIfNotExists(String bucketName) {
+    private void configureLifecyclePolicy(String bucketName) {
         try {
-            boolean found = minioClient.bucketExists(
-                    BucketExistsArgs.builder().bucket(bucketName).build()
+            LifecycleRule rule = new LifecycleRule(
+                    Status.ENABLED,
+                    null,
+                    new Expiration((java.time.ZonedDateTime) null, 1, null),
+                    new RuleFilter(""),
+                    "expire-old-archives",
+                    null,
+                    null,
+                    null
             );
 
-            if (!found) {
-                minioClient.makeBucket(
-                        MakeBucketArgs.builder().bucket(bucketName).build()
-                );
-            }
+            LifecycleConfiguration lifecycleConfig = new LifecycleConfiguration(List.of(rule));
+
+            minioClient.setBucketLifecycle(
+                    SetBucketLifecycleArgs.builder()
+                            .bucket(bucketName)
+                            .config(lifecycleConfig)
+                            .build()
+            );
+            log.info("Lifecycle policy настроена для бакета: {} (удаление через 1 день)", bucketName);
+
         } catch (Exception e) {
-            log.error("Ошибка при инициализации MinIO: {}", e.getMessage());
+            log.error("Не удалось настроить Lifecycle policy для {}: {}", bucketName, e.getMessage());
         }
     }
 }

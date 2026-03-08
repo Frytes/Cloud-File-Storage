@@ -11,30 +11,24 @@ export const sendDownloadFile = async (downloadTask, updateTask, updateDownloadT
     }
 
     const filePath = downloadTask.operation.source;
-
     const params = new URLSearchParams({path: filePath});
-
     const fetchUrl = `${API_DOWNLOAD_FILES}?${params.toString()}`;
 
     console.log("Пытаемся скачать: " + filePath);
-
-    if (size === 0) {
-        console.log("Пытаемся получить размер: " + filePath);
-
-        try {
-            let stats = await sendGetObjectStats(filePath);
-            size = stats.size;
-        } catch (e){
-            console.log('Не получилось извлечь размер папки')
-            console.log(e);
-        }
-
-    }
 
     const response = await fetch(fetchUrl, {
         method: 'GET',
         credentials: 'include',
     });
+
+    if (response.status === 202) {
+        const data = await response.json();
+        console.log("Сервер начал архивацию. Ticket ID:", data.ticket);
+
+        updateTask(downloadTask, "pending", "Архивация на сервере... (Ticket: " + data.ticket.substring(0, 8) + ")");
+
+        return;
+    }
 
     if (!response.ok) {
         console.log(response);
@@ -45,6 +39,16 @@ export const sendDownloadFile = async (downloadTask, updateTask, updateDownloadT
         return;
     }
 
+    if (size === 0) {
+        console.log("Пытаемся получить размер файла: " + filePath);
+        try {
+            let stats = await sendGetObjectStats(filePath);
+            size = stats.size;
+        } catch (e) {
+            console.log('Не получилось извлечь размер файла, прогресс-бар может работать некорректно');
+            console.log(e);
+        }
+    }
 
     const updateSpeed = (speed) => {
         updateDownloadSpeed(downloadTask, speed);
@@ -59,36 +63,39 @@ export const sendDownloadFile = async (downloadTask, updateTask, updateDownloadT
         : extractSimpleName(filePath);
 
     let lastLoadedSize = 0;
-    let count = 0;
-    // Запускаем интервал обновления скорости (раз в секунду)
-    const speedInterval = setInterval(() => {
-        const speed = (loadedSize - lastLoadedSize); // Скорость в КБ/с
-        lastLoadedSize = loadedSize;
 
-        updateSpeed(speed); // Обновляем скорость загрузки
+    const speedInterval = setInterval(() => {
+        const speed = (loadedSize - lastLoadedSize);
+        lastLoadedSize = loadedSize;
+        updateSpeed(speed);
     }, 1000);
 
 
-    while (true) {
-        count++;
-        const {done, value} = await reader.read();
-        if (done) break;
+    try {
+        while (true) {
+            const {done, value} = await reader.read();
+            if (done) break;
 
-        chunks.push(value);
-        loadedSize += value.length;
+            chunks.push(value);
+            loadedSize += value.length;
 
-        if (count === 100) {
-            count = 0;
-            const progress = (loadedSize / size) * 100;
-            updateDownloadTask(downloadTask, progress);
+            if (size > 0) {
+                const progress = (loadedSize / size) * 100;
+                updateDownloadTask(downloadTask, progress);
+            }
         }
+    } catch (e) {
+        console.error("Ошибка при чтении стрима", e);
+        clearInterval(speedInterval);
+        throw e;
     }
+
     clearInterval(speedInterval);
 
     const blob = new Blob(chunks);
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
 
+    const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', contentName);
     document.body.appendChild(link);
@@ -96,4 +103,6 @@ export const sendDownloadFile = async (downloadTask, updateTask, updateDownloadT
 
     window.URL.revokeObjectURL(url);
     document.body.removeChild(link);
+
+    updateTask(downloadTask, "completed", "Скачивание завершено");
 };

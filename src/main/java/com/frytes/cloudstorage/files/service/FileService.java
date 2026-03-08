@@ -173,6 +173,26 @@ public class FileService {
         return foundFiles;
     }
 
+    public Long calculateFolderSize(Long userId, String path) {
+        String prefix = PathUtils.buildUserPath(userId, PathUtils.sanitize(path));
+        prefix = PathUtils.ensureTrailingSlash(prefix);
+
+        Iterable<Result<Item>> results = minioService.listObjectsRecursive(prefix);
+        long totalSize = 0L;
+
+        for (Result<Item> result : results) {
+            try {
+                Item item = result.get();
+                if (!item.isDir()) {
+                    totalSize += item.size();
+                }
+            } catch (Exception e) {
+                log.error("Ошибка при подсчете размера папки: {}", prefix, e);
+            }
+        }
+        return totalSize;
+    }
+
     private void moveFolderRecursively(String sourcePrefix, String targetPrefix) {
         String src = PathUtils.ensureTrailingSlash(sourcePrefix);
         String tgt = PathUtils.ensureTrailingSlash(targetPrefix);

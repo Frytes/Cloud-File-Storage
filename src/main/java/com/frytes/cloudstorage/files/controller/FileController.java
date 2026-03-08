@@ -2,6 +2,7 @@ package com.frytes.cloudstorage.files.controller;
 
 import com.frytes.cloudstorage.common.util.PathUtils;
 import com.frytes.cloudstorage.files.dto.FileDto;
+import com.frytes.cloudstorage.files.service.ArchiveService;
 import com.frytes.cloudstorage.files.service.FileService;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/resource")
@@ -24,6 +26,7 @@ import java.util.List;
 public class FileController {
 
     private final FileService fileService;
+    private final ArchiveService archiveService;
 
     @GetMapping
     public FileDto getFileInfo(
@@ -42,10 +45,21 @@ public class FileController {
     }
 
     @GetMapping("/download")
-    public ResponseEntity<InputStreamResource> downloadFile(
+    public ResponseEntity<Object> downloadFile(
             @RequestParam("path") String path,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
+        if (path.endsWith("/")) {
+            Long totalSize = fileService.calculateFolderSize(user.getId(), path);
+            String ticket = archiveService.sendArchivingTask(user.getId(), path, totalSize);
+
+            return ResponseEntity.accepted().body(Map.of(
+                    "ticket", ticket,
+                    "message", "Начата архивация папки",
+                    "status", "IN_PROGRESS"
+            ));
+        }
+
         var inputStream = fileService.downloadFile(user.getId(), path);
         String fileName = PathUtils.getFileNameFromPath(path);
         String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
