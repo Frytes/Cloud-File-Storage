@@ -3,18 +3,10 @@ import {extractSimpleName} from "../../../util/Utils.js";
 import {sendGetObjectStats} from "./SendGetObjectStats.js";
 import {throwSpecifyException} from "../../../../exception/ThrowSpecifyException.jsx";
 
-
 export const sendDownloadFile = async (downloadTask, updateTask, updateDownloadTask, size, updateDownloadSpeed) => {
-    if (import.meta.env.VITE_MOCK_FETCH_CALLS) {
-        console.log("Mocked fetch call for download file");
-        return;
-    }
-
     const filePath = downloadTask.operation.source;
     const params = new URLSearchParams({path: filePath});
     const fetchUrl = `${API_DOWNLOAD_FILES}?${params.toString()}`;
-
-    console.log("Пытаемся скачать: " + filePath);
 
     const response = await fetch(fetchUrl, {
         method: 'GET',
@@ -23,29 +15,23 @@ export const sendDownloadFile = async (downloadTask, updateTask, updateDownloadT
 
     if (response.status === 202) {
         const data = await response.json();
-        console.log("Сервер начал архивацию. Ticket ID:", data.ticket);
-
-        updateTask(downloadTask, "pending", "Архивация на сервере... (Ticket: " + data.ticket.substring(0, 8) + ")");
-
-        return;
+        return {
+            async: true,
+            ticket: data.ticket
+        };
     }
 
     if (!response.ok) {
-        console.log(response);
-        console.log('Ошибка при скачивании: ' + response.status);
         const error = await response.json();
-        console.log(error);
         throwSpecifyException(response.status, error);
         return;
     }
 
     if (size === 0) {
-        console.log("Пытаемся получить размер файла: " + filePath);
         try {
             let stats = await sendGetObjectStats(filePath);
             size = stats.size;
         } catch (e) {
-            console.log('Не получилось извлечь размер файла, прогресс-бар может работать некорректно');
             console.log(e);
         }
     }
@@ -70,7 +56,6 @@ export const sendDownloadFile = async (downloadTask, updateTask, updateDownloadT
         updateSpeed(speed);
     }, 1000);
 
-
     try {
         while (true) {
             const {done, value} = await reader.read();
@@ -85,7 +70,6 @@ export const sendDownloadFile = async (downloadTask, updateTask, updateDownloadT
             }
         }
     } catch (e) {
-        console.error("Ошибка при чтении стрима", e);
         clearInterval(speedInterval);
         throw e;
     }
@@ -105,4 +89,5 @@ export const sendDownloadFile = async (downloadTask, updateTask, updateDownloadT
     document.body.removeChild(link);
 
     updateTask(downloadTask, "completed", "Скачивание завершено");
+    return {async: false};
 };

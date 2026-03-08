@@ -5,6 +5,7 @@ import {StorageNavigationProvider} from "./Storage/StorageNavigationProvider.jsx
 import {StorageViewProvider} from "./Storage/StorageViewProvider.jsx";
 import {StorageSelectionProvider} from "./Storage/StorageSelectionProvider.jsx";
 import {FileOperationsProvider} from "./Files/FileOperationsProvider.jsx";
+import {WebSocketProvider} from "./WebSocket/WebSocketProvider.jsx";
 
 export const GlobalProvider = ({children}) => {
 
@@ -12,19 +13,17 @@ export const GlobalProvider = ({children}) => {
         <CustomThemeProvider>
             <NotificationProvider>
                 <AuthProvider>
-
-                    <StorageSelectionProvider>
-                        <StorageViewProvider>
-                            <StorageNavigationProvider>
-
-                                <FileOperationsProvider>
-                                    {children}
-                                </FileOperationsProvider>
-
-                            </StorageNavigationProvider>
-                        </StorageViewProvider>
-                    </StorageSelectionProvider>
-
+                    <WebSocketProvider>
+                        <StorageSelectionProvider>
+                            <StorageViewProvider>
+                                <StorageNavigationProvider>
+                                    <FileOperationsProvider>
+                                        {children}
+                                    </FileOperationsProvider>
+                                </StorageNavigationProvider>
+                            </StorageViewProvider>
+                        </StorageSelectionProvider>
+                    </WebSocketProvider>
                 </AuthProvider>
             </NotificationProvider>
         </CustomThemeProvider>

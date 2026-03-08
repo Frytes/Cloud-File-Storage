@@ -4,6 +4,7 @@ import com.frytes.cloudstorage.common.exception.DirectoryCreationException;
 import com.frytes.cloudstorage.common.exception.FileUploadException;
 import com.frytes.cloudstorage.common.exception.StorageOperationException;
 import io.minio.*;
+import io.minio.http.Method;
 import io.minio.messages.*;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -36,23 +38,18 @@ public class MinioService {
         configureLifecyclePolicy(tempArchivesBucket);
     }
 
-    private void createBucketIfNotExists(String bucketName) {
+    public String getPresignedUrl(String objectName) {
         try {
-            boolean found = minioClient.bucketExists(
-                    BucketExistsArgs.builder().bucket(bucketName).build()
+            return minioClient.getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs.builder()
+                            .method(Method.GET)
+                            .bucket(tempArchivesBucket)
+                            .object(objectName)
+                            .expiry(1, TimeUnit.HOURS)
+                            .build()
             );
-
-            if (!found) {
-                minioClient.makeBucket(
-                        MakeBucketArgs.builder().bucket(bucketName).build()
-                );
-                log.info("Бакет успешно создан: {}", bucketName);
-            } else {
-                log.info("Бакет уже существует: {}", bucketName);
-            }
         } catch (Exception e) {
-            log.error("Критическая ошибка при инициализации MinIO бакета {}: {}", bucketName, e.getMessage());
-
+            throw new StorageOperationException("Ошибка генерации ссылки: " + e.getMessage(), e);
         }
     }
 
@@ -198,6 +195,26 @@ public class MinioService {
 
         } catch (Exception e) {
             log.error("Не удалось настроить Lifecycle policy для {}: {}", bucketName, e.getMessage());
+        }
+    }
+
+    private void createBucketIfNotExists(String bucketName) {
+        try {
+            boolean found = minioClient.bucketExists(
+                    BucketExistsArgs.builder().bucket(bucketName).build()
+            );
+
+            if (!found) {
+                minioClient.makeBucket(
+                        MakeBucketArgs.builder().bucket(bucketName).build()
+                );
+                log.info("Бакет успешно создан: {}", bucketName);
+            } else {
+                log.info("Бакет уже существует: {}", bucketName);
+            }
+        } catch (Exception e) {
+            log.error("Критическая ошибка при инициализации MinIO бакета {}: {}", bucketName, e.getMessage());
+
         }
     }
 }

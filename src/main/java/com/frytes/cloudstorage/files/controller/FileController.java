@@ -1,6 +1,7 @@
 package com.frytes.cloudstorage.files.controller;
 
 import com.frytes.cloudstorage.common.util.PathUtils;
+import com.frytes.cloudstorage.files.dto.ArchiveStatus;
 import com.frytes.cloudstorage.files.dto.FileDto;
 import com.frytes.cloudstorage.files.service.ArchiveService;
 import com.frytes.cloudstorage.files.service.FileService;
@@ -51,12 +52,12 @@ public class FileController {
     ) {
         if (path.endsWith("/")) {
             Long totalSize = fileService.calculateFolderSize(user.getId(), path);
-            String ticket = archiveService.sendArchivingTask(user.getId(), path, totalSize);
+            String ticket = archiveService.sendArchivingTask(user.getId(), user.getUsername(), path, totalSize);
 
             return ResponseEntity.accepted().body(Map.of(
                     "ticket", ticket,
                     "message", "Начата архивация папки",
-                    "status", "IN_PROGRESS"
+                    ArchiveStatus.STATUS_KEY, ArchiveStatus.IN_PROGRESS.name()
             ));
         }
 
@@ -70,9 +71,21 @@ public class FileController {
                 .body(new InputStreamResource(inputStream));
     }
 
+    @GetMapping("/download/status")
+    public ResponseEntity<Map<String, String>> checkDownloadStatus(@RequestParam("ticket") String ticket) {
+        Map<String, String> result = archiveService.getArchiveStatus(ticket);
+        String currentStatus = result.get(ArchiveStatus.STATUS_KEY);
+
+        if (ArchiveStatus.READY.name().equals(currentStatus) ||
+                ArchiveStatus.ERROR.name().equals(currentStatus)) {
+            return ResponseEntity.ok(result);
+        }
+        return ResponseEntity.accepted().body(result);
+    }
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public void uploadFiles( // Переименовали для ясности (было uploadFile)
+    public void uploadFiles(
                              @RequestParam("path") String path,
                              @RequestParam("object") List<MultipartFile> files,
                              @AuthenticationPrincipal CustomUserDetails user

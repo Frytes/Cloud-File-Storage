@@ -6,6 +6,7 @@ import java.io.Serializable;
 
 @Builder
 public record ArchiveTask(
+        String username,
         String ticketId,
         Long userId,
         String path,

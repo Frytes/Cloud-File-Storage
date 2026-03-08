@@ -26,8 +26,9 @@ class ArchiveServiceIntegrationTest {
         String path = "photos/vacation";
         Long userId = 100L;
         Long size = 500L;
+        String userName = "testName";
 
-        archiveService.sendArchivingTask(userId, path, size);
+        archiveService.sendArchivingTask(userId, userName, path, size);
         verify(archiveListener, timeout(5000).times(1)).listen(any());
     }
 }

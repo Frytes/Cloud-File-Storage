@@ -16,19 +16,15 @@ const FileOperationsContext = createContext();
 
 export const useStorageOperations = () => useContext(FileOperationsContext);
 
-
 export const FileOperationsProvider = ({children}) => {
 
     const {loadFolder, currentPath, getObjectByPath, folderContent, currentPathRef} = useStorageNavigation();
-    const { isCutMode, bufferIds, endCopying, endCutting, selectedIds} = useStorageSelection();
+    const {isCutMode, bufferIds, endCopying, endCutting, selectedIds} = useStorageSelection();
 
     const [tasks, setTasks] = useState([]);
     const [newTasksAdded, setNewTasksAdded] = useState(false);
-
-
     const [nameConflict, setNameConflict] = useState(false);
     const [conflictedIds, setConflictedIds] = useState([]);
-
     const [taskRunning, setTaskRunning] = useState(false);
 
     const {showError} = useNotification();
@@ -44,7 +40,6 @@ export const FileOperationsProvider = ({children}) => {
             setNameConflict(true);
             return true;
         }
-
         return false;
     }
 
@@ -52,7 +47,6 @@ export const FileOperationsProvider = ({children}) => {
         const operation = {type: type, source: objectPath, target: target};
         return {id: nanoid(), operation: operation, status: "pending", message: message};
     }
-
 
     const identicalTasks = (task1) => {
         const pendingTasks = tasks.filter((task) => task.status === "pending" || task.status === "progress");
@@ -71,10 +65,8 @@ export const FileOperationsProvider = ({children}) => {
 
     const allTasksCompleted = () => {
         let activeTasks = tasks.filter((task) => task.status === "pending" || task.status === "progress");
-
         return activeTasks.length === 0;
     }
-
 
     const updateTask = (task, newStatus = null, newMessage = null) => {
         setTasks(prevTasks =>
@@ -89,13 +81,42 @@ export const FileOperationsProvider = ({children}) => {
         )
     }
 
-    const uploadObjects = (files) => {
+    useEffect(() => {
+        const onArchiveReady = (e) => {
+            const ticket = e.detail;
+            setTasks(prev => prev.map(t => {
+                if (t.ticket === ticket) {
+                    return {...t, status: "completed", message: "Архив готов и скачан"};
+                }
+                return t;
+            }));
+        };
 
+        const onArchiveError = (e) => {
+            const ticket = e.detail;
+            setTasks(prev => prev.map(t => {
+                if (t.ticket === ticket) {
+                    return {...t, status: "error", message: "Ошибка создания архива"};
+                }
+                return t;
+            }));
+        };
+
+        window.addEventListener('archive-ready', onArchiveReady);
+        window.addEventListener('archive-error', onArchiveError);
+
+        return () => {
+            window.removeEventListener('archive-ready', onArchiveReady);
+            window.removeEventListener('archive-error', onArchiveError);
+        };
+    }, []);
+
+    const uploadObjects = (files) => {
         const filesWithoutFolder = [];
         const innerFolders = {};
 
         files.forEach(({file, path}) => {
-            const fileName = path; // Предполагаем, что file - это объект с полем name
+            const fileName = path;
             const firstSlash = fileName.indexOf("/");
 
             if (firstSlash === -1) {
@@ -111,9 +132,7 @@ export const FileOperationsProvider = ({children}) => {
 
         let namesWF = filesWithoutFolder.map(({file}) => file.name);
         let namesIF = Object.keys(innerFolders);
-
         const allNames = [...namesWF, ...namesIF];
-
 
         const uploadTasks = allNames.map(source => {
             let task = createTask(source, null, "upload", "В очереди на загрузку");
@@ -129,7 +148,6 @@ export const FileOperationsProvider = ({children}) => {
             return {task, files}
         });
 
-
         let uniqueTasks = uploadTasks
             .map(({task, files}) => {
                 task = {...task, progress: 0}
@@ -139,23 +157,17 @@ export const FileOperationsProvider = ({children}) => {
 
         setTasks(tasks => [...tasks, ...uniqueTasks.map(({task}) => task)]);
         setNewTasksAdded(true);
-
         executeUploadTasks(uniqueTasks);
     }
 
-
     const executeUploadTasks = async (uniqueTasks) => {
         const currPath = currentPathRef.current.textContent;
-
-
         setTaskRunning(true);
 
         try {
             await Promise.all(uniqueTasks.map(async ({task, files}) => {
                 updateTask(task, "progress", "Загружаем...")
                 await sendUpload(files, updateDownloadTask, updateTask, task, currPath);
-
-
             }));
         } catch (e) {
             switch (true) {
@@ -167,12 +179,8 @@ export const FileOperationsProvider = ({children}) => {
         setTimeout(() => {
             loadFolder(currPath);
         }, 300);
-
         setTaskRunning(false);
-
-
     }
-
 
     const deleteObject = (objects) => {
         let deleteTasks = objects.map(path => createTask(path, null, "delete", "В очереди на удаление"));
@@ -185,10 +193,7 @@ export const FileOperationsProvider = ({children}) => {
 
     const moveObjects = (sourceObjects, target) => {
         const moveTasks = sourceObjects.map(source => createTask(source, target + extractSimpleName(source), "move", "В очереди для перемещения"));
-
-
         let uniqueTasks = moveTasks.filter((task) => !identicalTasks(task));
-
         setTasks([...tasks, ...uniqueTasks]);
         setNewTasksAdded(true);
         executeTasks(uniqueTasks);
@@ -197,7 +202,6 @@ export const FileOperationsProvider = ({children}) => {
     const moveObjectInternal = (sourcePath, targetPath) => {
         const moveTasks = sourcePath.map(source => createTask(source, targetPath, "move", "В очереди для перемещения"));
         let uniqueTasks = moveTasks.filter((task) => !identicalTasks(task));
-
         setTasks([...tasks, ...uniqueTasks]);
         setNewTasksAdded(true);
         executeTasks(uniqueTasks);
@@ -205,33 +209,12 @@ export const FileOperationsProvider = ({children}) => {
 
     const renameObject = (oldPath, newPath) => {
         let task = createTask(oldPath, newPath, "move", "В очереди для переименования");
-
         if (identicalTasks(task)) {
             return;
         }
-
         setTasks([...tasks, task]);
         setNewTasksAdded(true);
-
         executeRename(task);
-    }
-
-    const copyObjects = (sourceObjects, target) => {
-        const copyTasks = sourceObjects.map(source => createTask(source, target + extractSimpleName(source), "copy", "В очереди для копирования"));
-        let uniqueTasks = copyTasks.filter((task) => !identicalTasks(task));
-
-        setTasks([...tasks, ...uniqueTasks]);
-        setNewTasksAdded(true);
-        executeTasks(uniqueTasks);
-    }
-
-    const copyObjectInternal = (sourceObjects, target) => {
-        const copyTasks = sourceObjects.map(source => createTask(source, target, "copy", "В очереди для копирования"));
-        let uniqueTasks = copyTasks.filter((task) => !identicalTasks(task));
-
-        setTasks([...tasks, ...uniqueTasks]);
-        setNewTasksAdded(true);
-        executeTasks(uniqueTasks);
     }
 
     const downloadObjects = (objectPath) => {
@@ -239,13 +222,9 @@ export const FileOperationsProvider = ({children}) => {
         if (identicalTasks(task)) {
             return;
         }
-
         const downloadTask = {...task, progress: 0};
-
         setTasks([...tasks, downloadTask]);
         setNewTasksAdded(true);
-        //todo start execution right in task with useEffect()
-
         executeDownloadTask(downloadTask);
     }
 
@@ -278,15 +257,27 @@ export const FileOperationsProvider = ({children}) => {
         let obj = getObjectByPath(downloadTask.operation.source);
         let size = obj ? obj.size : 0;
         try {
-            await sendDownloadFile(downloadTask, updateTask, updateDownloadTask, size, updateDownloadSpeed);
-            updateTask(downloadTask, "completed", "Скачивание завершено")
+            const result = await sendDownloadFile(downloadTask, updateTask, updateDownloadTask, size, updateDownloadSpeed);
+
+            if (result && result.async) {
+                const ticket = result.ticket;
+                setTasks(prev => prev.map(t =>
+                    t.id === downloadTask.id
+                        ? { ...t, status: "pending", message: "Архивация на сервере...", ticket: ticket }
+                        : t
+                ));
+
+                const pending = JSON.parse(localStorage.getItem('pendingArchives') || "[]");
+                if (!pending.includes(ticket)) {
+                    pending.push(ticket);
+                    localStorage.setItem('pendingArchives', JSON.stringify(pending));
+                }
+            }
 
         } catch (error) {
             console.log(error.message);
             updateTask(downloadTask, "error", error.message);
-
         }
-
     }
 
     async function executeRename(task) {
@@ -297,19 +288,14 @@ export const FileOperationsProvider = ({children}) => {
             let extractSimpleName1 = extractSimpleName(task.operation.target);
             const newName = extractSimpleName1.endsWith("/") ? extractSimpleName1.slice(0, -1) : extractSimpleName1;
             updateTask(task, "completed", "Новое имя присвоено: " + newName)
-
         } catch (e) {
             updateTask(task, "error", e.message);
         }
-
         setTaskRunning(false);
-
     }
-
 
     const executeTasks = async (pendingTasks) => {
         setTaskRunning(true);
-
         try {
             for (const task of pendingTasks) {
                 if (task.operation.type === "delete") {
@@ -318,7 +304,6 @@ export const FileOperationsProvider = ({children}) => {
                 if (task.operation.type === "move") {
                     await executeMoveTask(task);
                 }
-
             }
         } catch (e) {
             switch (true) {
@@ -336,17 +321,14 @@ export const FileOperationsProvider = ({children}) => {
         }
     }, [taskRunning])
 
-
     async function executeMoveTask(task) {
         try {
             updateTask(task, "progress", "Перемещаем...")
             await sendMoveObject(task.operation.source, task.operation.target);
             updateTask(task, "completed", "Перемещение успешно выполнено")
-
         } catch (e) {
             updateTask(task, "error", e.message);
         }
-
     }
 
     const executeDeleteTask = async (task) => {
@@ -354,27 +336,19 @@ export const FileOperationsProvider = ({children}) => {
             updateTask(task, "progress", "Удаляем...");
             await sendDeleteObject(task.operation.source);
             updateTask(task, "completed", "Удаление успешно выполнено")
-
         } catch (e) {
             updateTask(task, "error", e.message);
         }
     }
 
     const pasteObjects = () => {
-        if (bufferIds.length === 0) {
-            return;
-        }
-
-        if (checkConflicts(bufferIds)) {
-            return;
-        }
-
+        if (bufferIds.length === 0) return;
+        if (checkConflicts(bufferIds)) return;
         if (isCutMode) {
             moveObjects(bufferIds, currentPath);
             endCutting();
         }
     }
-
 
     const clearSelectionMode = () => {
         endCutting();
@@ -391,30 +365,24 @@ export const FileOperationsProvider = ({children}) => {
         if (isCutMode) {
             moveObjectInternal(bufferIds, currentPath + newName);
             endCutting();
-        }  else {
+        } else {
             const path = conflictedIds[0];
             let sep = path.lastIndexOf("/", path.length - 2);
             const newPath = path.substring(0, sep + 1) + newName;
             moveObjectInternal(selectedIds, newPath);
         }
-
         handleModalConflictClose();
     }
 
-
     useEffect(() => {
-
         let activeTasks = tasks.filter((task) => task.status === "pending" || task.status === "progress");
-
         const handleBeforeUnload = (event) => {
             if (activeTasks.length > 0) {
                 event.preventDefault();
                 event.returnValue = '';
             }
         };
-
         window.addEventListener('beforeunload', handleBeforeUnload);
-
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
@@ -428,8 +396,6 @@ export const FileOperationsProvider = ({children}) => {
             deleteTask,
             clearTasks,
             allTasksCompleted,
-
-
             deleteObject,
             moveObjects,
             pasteObjects,
