@@ -21,13 +21,45 @@ export const FileOperationsProvider = ({children}) => {
     const {loadFolder, currentPath, getObjectByPath, folderContent, currentPathRef} = useStorageNavigation();
     const {isCutMode, bufferIds, endCopying, endCutting, selectedIds} = useStorageSelection();
 
-    const [tasks, setTasks] = useState([]);
+    const [tasks, setTasks] = useState(() => {
+        try {
+            const savedTasks = localStorage.getItem('file_operations_tasks');
+            if (savedTasks) {
+                let parsed = JSON.parse(savedTasks);
+
+                return parsed.map(t => {
+                    if ((t.status === "progress" || t.status === "pending") && !t.ticket) {
+                        return { ...t, status: "error", message: "Прервано перезагрузкой" };
+                    }
+                    return t;
+                });
+            }
+        } catch (e) {
+            console.error("Failed to parse tasks", e);
+        }
+        return [];
+    });
+
     const [newTasksAdded, setNewTasksAdded] = useState(false);
     const [nameConflict, setNameConflict] = useState(false);
     const [conflictedIds, setConflictedIds] = useState([]);
     const [taskRunning, setTaskRunning] = useState(false);
 
     const {showError} = useNotification();
+
+    useEffect(() => {
+        localStorage.setItem('file_operations_tasks', JSON.stringify(tasks));
+    }, [tasks]);
+
+    useEffect(() => {
+        const handleStorageChange = (e) => {
+            if (e.key === 'file_operations_tasks' && e.newValue) {
+                setTasks(JSON.parse(e.newValue));
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
 
     const nameAlreadyExists = (path) => {
         let fltrd = folderContent.filter(obj => obj.name === extractSimpleName(path));
@@ -60,7 +92,7 @@ export const FileOperationsProvider = ({children}) => {
     }
 
     const clearTasks = () => {
-        setTasks([]);
+        setTasks(prevTasks => prevTasks.filter(t => t.status === "pending" || t.status === "progress"));
     }
 
     const allTasksCompleted = () => {
@@ -174,7 +206,7 @@ export const FileOperationsProvider = ({children}) => {
                 case e instanceof StorageExceedException:
                     showError(e.message);
             }
-            clearTasks();
+
         }
         setTimeout(() => {
             loadFolder(currPath);
@@ -310,7 +342,6 @@ export const FileOperationsProvider = ({children}) => {
                 case e instanceof StorageExceedException:
                     showError(e.message);
             }
-            clearTasks();
         }
         setTaskRunning(false);
     }
@@ -375,9 +406,12 @@ export const FileOperationsProvider = ({children}) => {
     }
 
     useEffect(() => {
-        let activeTasks = tasks.filter((task) => task.status === "pending" || task.status === "progress");
+        let vulnerableTasks = tasks.filter((task) =>
+            (task.status === "pending" || task.status === "progress") && !task.ticket
+        );
+
         const handleBeforeUnload = (event) => {
-            if (activeTasks.length > 0) {
+            if (vulnerableTasks.length > 0) {
                 event.preventDefault();
                 event.returnValue = '';
             }
