@@ -20,6 +20,7 @@ import java.io.PipedOutputStream;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -34,7 +35,8 @@ public class ArchiveListener {
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void listen(ArchiveTask task) {
-        log.info("📦 Начало архивации: {}", task);
+        log.info("📦 [Ticket: {}] Начало архивации. Путь: {}, Размер: ~{} MB",
+                task.ticketId(), task.path(), task.totalSize() / 1024 / 1024);
 
         String redisKey = "archive:status:" + task.ticketId();
         redisTemplate.expire(redisKey, 24, TimeUnit.HOURS);
@@ -43,12 +45,20 @@ public class ArchiveListener {
         String sourcePrefix = PathUtils.buildUserPath(task.userId(), PathUtils.sanitize(task.path()));
         String finalSourcePrefix = PathUtils.ensureTrailingSlash(sourcePrefix);
 
-        try (PipedInputStream pipedIn = new PipedInputStream();
+        int pipeBufferSize = 5 * 1024 * 1024;
+
+        try (PipedInputStream pipedIn = new PipedInputStream(pipeBufferSize);
              PipedOutputStream pipedOut = new PipedOutputStream(pipedIn)) {
 
             CompletableFuture<Void> zipFuture = CompletableFuture.runAsync(() -> {
                 try (ZipOutputStream zipOut = new ZipOutputStream(pipedOut)) {
+
+                    zipOut.setLevel(Deflater.NO_COMPRESSION);
+
                     Iterable<Result<Item>> results = minioService.listObjectsRecursive(finalSourcePrefix);
+
+                    long startTime = System.currentTimeMillis();
+
                     for (Result<Item> result : results) {
                         Item item = result.get();
                         if (item.isDir()) continue;
@@ -64,21 +74,22 @@ public class ArchiveListener {
                         }
                         zipOut.closeEntry();
                     }
+
+                    long duration = (System.currentTimeMillis() - startTime) / 1000;
+                    log.info("🏁 [Ticket: {}] Упаковка завершена за {} сек.", task.ticketId(), duration);
+
                 } catch (Exception e) {
                     throw new ArchiveCreationException("Failed to zip", e);
                 }
             });
 
             minioService.uploadArchive(archiveName, pipedIn);
-
             zipFuture.join();
 
-            log.info("✅ Архив готов: {}", archiveName);
-
+            log.info("✅ [Ticket: {}] Архив успешно загружен в MinIO: {}", task.ticketId(), archiveName);
             redisTemplate.opsForValue().set(redisKey, ArchiveStatus.READY.name(), 24, TimeUnit.HOURS);
 
             String downloadUrl = minioService.getPresignedUrl(archiveName);
-
             messagingTemplate.convertAndSendToUser(
                     task.username(),
                     "/queue/archive",
@@ -90,10 +101,8 @@ public class ArchiveListener {
             );
 
         } catch (Exception e) {
-            log.error("❌ Ошибка при архивации", e);
-            
+            log.error("❌ [Ticket: {}] Ошибка при архивации", task.ticketId(), e);
             redisTemplate.opsForValue().set(redisKey, ArchiveStatus.ERROR.name(), 24, TimeUnit.HOURS);
-
             messagingTemplate.convertAndSendToUser(
                     task.username(),
                     "/queue/archive",
