@@ -1,6 +1,8 @@
 spring:
   application:
     name: CloudStorage
+  tomcat:
+    max-parameters: 10000
   security:
     oauth2:
       client:
@@ -64,3 +66,7 @@ minio:
   buckets:
     user-files: user-files
     temp-archives: temp-archives
+
+app:
+  upload:
+    max-files-per-request: 10000
