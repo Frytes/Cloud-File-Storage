@@ -7,8 +7,9 @@ import io.minio.*;
 import io.minio.http.Method;
 import io.minio.messages.*;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
+// import lombok.RequiredArgsConstructor; // Убираем, так как нужен конструктор с @Qualifier
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +20,10 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class MinioService {
 
     private final MinioClient minioClient;
+    private final MinioClient signerMinioClient;
 
     @Value("${minio.buckets.user-files}")
     private String userFilesBucket;
@@ -30,23 +31,22 @@ public class MinioService {
     @Value("${minio.buckets.temp-archives}")
     private String tempArchivesBucket;
 
-    @Value("${minio.url}")
-    private String internalUrl;
-
-    @Value("${minio.external-url}")
-    private String externalUrl;
+    public MinioService(MinioClient minioClient,
+                        @Qualifier("signerMinioClient") MinioClient signerMinioClient) {
+        this.minioClient = minioClient;
+        this.signerMinioClient = signerMinioClient;
+    }
 
     @PostConstruct
     public void init() {
         createBucketIfNotExists(userFilesBucket);
         createBucketIfNotExists(tempArchivesBucket);
-
         configureLifecyclePolicy(tempArchivesBucket);
     }
 
     public String getPresignedUrl(String objectName) {
         try {
-            String url = minioClient.getPresignedObjectUrl(
+            return signerMinioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
                             .bucket(tempArchivesBucket)
@@ -54,12 +54,6 @@ public class MinioService {
                             .expiry(1, TimeUnit.HOURS)
                             .build()
             );
-
-            if (externalUrl != null && !externalUrl.isEmpty() && !externalUrl.equals(internalUrl)) {
-                return url.replace(internalUrl, externalUrl);
-            }
-            return url;
-
         } catch (Exception e) {
             throw new StorageOperationException("Ошибка генерации ссылки: " + e.getMessage(), e);
         }
@@ -79,13 +73,13 @@ public class MinioService {
         }
     }
 
-     public void upload(String objectName, InputStream inputStream, String contentType) {
+    public void upload(String objectName, InputStream inputStream, String contentType) {
         try {
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(userFilesBucket)
                             .object(objectName)
-                            .stream(inputStream, -1, 10485760) // Part size 10MB
+                            .stream(inputStream, -1, 10485760)
                             .contentType(contentType)
                             .build()
             );
@@ -115,7 +109,6 @@ public class MinioService {
                 .prefix(prefix)
                 .recursive(false)
                 .build();
-
         return minioClient.listObjects(args);
     }
 
@@ -155,7 +148,7 @@ public class MinioService {
         }
     }
 
-     public void copyObject(String source, String target) {
+    public void copyObject(String source, String target) {
         try {
             minioClient.copyObject(
                     CopyObjectArgs.builder()
@@ -194,9 +187,7 @@ public class MinioService {
                     null,
                     null
             );
-
             LifecycleConfiguration lifecycleConfig = new LifecycleConfiguration(List.of(rule));
-
             minioClient.setBucketLifecycle(
                     SetBucketLifecycleArgs.builder()
                             .bucket(bucketName)
@@ -204,7 +195,6 @@ public class MinioService {
                             .build()
             );
             log.info("Lifecycle policy настроена для бакета: {} (удаление через 1 день)", bucketName);
-
         } catch (Exception e) {
             log.error("Не удалось настроить Lifecycle policy для {}: {}", bucketName, e.getMessage());
         }
@@ -215,7 +205,6 @@ public class MinioService {
             boolean found = minioClient.bucketExists(
                     BucketExistsArgs.builder().bucket(bucketName).build()
             );
-
             if (!found) {
                 minioClient.makeBucket(
                         MakeBucketArgs.builder().bucket(bucketName).build()
@@ -226,7 +215,6 @@ public class MinioService {
             }
         } catch (Exception e) {
             log.error("Критическая ошибка при инициализации MinIO бакета {}: {}", bucketName, e.getMessage());
-
         }
     }
 }
