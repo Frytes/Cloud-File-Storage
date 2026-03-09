@@ -50,7 +50,7 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )
-                        .successHandler(new SimpleUrlAuthenticationSuccessHandler("http://192.168.0.14.nip.io/files"))
+                        .successHandler(new SimpleUrlAuthenticationSuccessHandler("http://localhost/files"))
                 )
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
