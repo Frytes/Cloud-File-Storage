@@ -42,6 +42,13 @@ jobs:
       - name: Build JAR (Skip Tests)
         run: ./mvnw clean package -DskipTests
 
+      - name: Create .env file
+        run: |
+          echo "MINIO_URL=${{ secrets.MINIO_URL }}" >> .env
+          echo "MINIO_EXTERNAL_URL=${{ secrets.MINIO_EXTERNAL_URL }}" >> .env
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+
       - name: Docker Compose Up
         run: |
           docker compose down --remove-orphans
