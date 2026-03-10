@@ -69,7 +69,9 @@ class AuthServiceTest {
         when(authentication.getName()).thenReturn("newuser");
         doReturn(List.of(new SimpleGrantedAuthority("ROLE_USER"))).when(authentication).getAuthorities();
 
-        AuthResponse response = authService.register(request, httpRequest);
+        authService.register(request);
+        LoginRequest loginRequest = new LoginRequest(request.username(), request.password());
+        AuthResponse response = authService.login(loginRequest, httpRequest);
 
         assertThat(response.username()).isEqualTo("newuser");
         assertThat(response.role()).isEqualTo("USER");
@@ -85,7 +87,7 @@ class AuthServiceTest {
         RegisterRequest request = new RegisterRequest("exists", "pass");
         when(userRepository.existsByUsername("exists")).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.register(request, httpRequest))
+        assertThatThrownBy(() -> authService.register(request))
                 .isInstanceOf(UserAlreadyExistsException.class);
 
         verify(userRepository, never()).save(any());

@@ -20,7 +20,9 @@ public class AuthController {
     @PostMapping("/sign-up")
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse register(@RequestBody @Valid RegisterRequest request, HttpServletRequest httpRequest) {
-        return authService.register(request, httpRequest);
+        authService.register(request);
+        LoginRequest loginRequest = new LoginRequest(request.username(), request.password());
+        return authService.login(loginRequest, httpRequest);
     }
 
     @PostMapping("/sign-in")

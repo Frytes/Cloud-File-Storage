@@ -35,7 +35,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     @Transactional
-    public AuthResponse register(RegisterRequest request, HttpServletRequest httpRequest) {
+    public void register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.username())) {
             throw new UserAlreadyExistsException("Пользователь с таким именем уже существует");
         }
@@ -47,8 +47,6 @@ public class AuthService {
 
         userRepository.save(user);
         log.info("Зарегистрирован новый пользователь: {}", user.getUsername());
-
-        return login(new LoginRequest(request.username(), request.password()), httpRequest);
     }
 
     public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
