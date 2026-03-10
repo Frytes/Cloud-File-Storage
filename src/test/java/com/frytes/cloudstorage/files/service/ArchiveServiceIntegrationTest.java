@@ -11,7 +11,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.Map;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -54,7 +54,7 @@ class ArchiveServiceIntegrationTest {
         Map<String, String> status = archiveService.getArchiveStatus(ticketId);
 
         assertThat(status).isNotNull();
-        assertThat(status.get(ArchiveStatus.STATUS_KEY)).isEqualTo(ArchiveStatus.IN_PROGRESS.name());
+        assertThat(status).containsEntry(ArchiveStatus.STATUS_KEY, ArchiveStatus.IN_PROGRESS.name());
         String redisValue = redisTemplate.opsForValue().get("archive:status:" + ticketId);
         assertThat(redisValue).isEqualTo("IN_PROGRESS");
     }
