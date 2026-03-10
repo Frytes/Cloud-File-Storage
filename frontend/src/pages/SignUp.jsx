@@ -49,7 +49,8 @@ export const SignUp = () => {
                 case error instanceof ConflictException:
                 case error instanceof BadRequestException:
                     showWarn(error.message);
-                    setUsernameError(error.message);
+                    setPassword('');
+                    setConfirmPassword('');
                     break;
                 default:
                     showError("Не удалось зарегистрироваться. Попробуйте позже");
@@ -124,7 +125,6 @@ export const SignUp = () => {
                         Зарегистрироваться
                     </Button>
 
-                    {/* РАЗДЕЛИТЕЛЬ И КНОПКА GOOGLE */}
                     <Divider sx={{ my: 1 }}>или</Divider>
 
                     <Button

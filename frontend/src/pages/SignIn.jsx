@@ -44,7 +44,7 @@ export const SignIn = () => {
                 case error instanceof NotFoundException:
                 case error instanceof BadRequestException:
                     showWarn(error.message);
-                    setUsernameError(error.message);
+                    setPassword(''); // Сбрасываем только пароль, чтобы кнопка ожила
                     break;
                 default:
                     showError("Ошибка при попытке входа. Попробуйте позже");
@@ -106,7 +106,6 @@ export const SignIn = () => {
                         Войти
                     </Button>
 
-                    {/* РАЗДЕЛИТЕЛЬ И КНОПКА GOOGLE */}
                     <Divider sx={{ my: 1 }}>или</Divider>
 
                     <Button
