@@ -12,7 +12,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import java.util.Map;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
@@ -36,8 +36,10 @@ class ArchiveServiceIntegrationTest {
         Long size = 500L;
         String userName = "testName";
 
-        archiveService.sendArchivingTask(userId, userName, path, size);
-        verify(archiveListener, timeout(5000).times(1)).listen(any());
+        String ticketId = archiveService.sendArchivingTask(userId, userName, path, size);
+
+        verify(archiveListener, timeout(5000).atLeastOnce())
+                .listen(argThat(task -> task.ticketId().equals(ticketId)));
     }
 
     @Test
