@@ -7,10 +7,11 @@ import com.frytes.cloudstorage.files.dto.ArchiveStatus;
 import com.frytes.cloudstorage.files.dto.ArchiveTask;
 import io.minio.Result;
 import io.minio.messages.Item;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
@@ -21,7 +22,6 @@ import java.io.PipedOutputStream;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import org.springframework.core.task.TaskExecutor;
 import java.util.concurrent.TimeoutException;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
@@ -29,7 +29,6 @@ import java.util.zip.ZipOutputStream;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class ArchiveListener {
 
     private final MinioService minioService;
@@ -42,6 +41,16 @@ public class ArchiveListener {
 
     @Value("${app.archive.expiration-hours:24}")
     private long expirationHours;
+
+    public ArchiveListener(MinioService minioService,
+                           StringRedisTemplate redisTemplate,
+                           SimpMessagingTemplate messagingTemplate,
+                           @Qualifier("archiveTaskExecutor") TaskExecutor applicationTaskExecutor) {
+        this.minioService = minioService;
+        this.redisTemplate = redisTemplate;
+        this.messagingTemplate = messagingTemplate;
+        this.applicationTaskExecutor = applicationTaskExecutor;
+    }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void listen(ArchiveTask task) {

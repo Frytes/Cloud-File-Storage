@@ -68,11 +68,15 @@ app:
   frontend:
     url: ${FRONTEND_URL:http://localhost/files}
   search:
-    limit: 50                      # Максимальное количество результатов поиска.
+    limit: 50                     # Максимальное количество результатов поиска.
   upload:
     max-files-per-request: 10000  # Максимальное количество файлов в одном запросе на загрузку
   archive:
     expiration-hours: 24          # Время жизни архива и ссылки по ТЗ
+    executor:                     # Настройки пула потоков для архивации
+      core-pool-size: 2
+      max-pool-size: 5
+      queue-capacity: 50
 
 
 minio:
