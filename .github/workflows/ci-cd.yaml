@@ -46,6 +46,13 @@ jobs:
 
       - name: Create .env file
         run: |
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "MINIO_ACCESS_KEY=${{ secrets.MINIO_ACCESS_KEY }}" >> .env
+          echo "MINIO_SECRET_KEY=${{ secrets.MINIO_SECRET_KEY }}" >> .env
+          echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> .env
+          echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env
           echo "MINIO_URL=${{ secrets.MINIO_URL }}" >> .env
           echo "MINIO_EXTERNAL_URL=${{ secrets.MINIO_EXTERNAL_URL }}" >> .env
           echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env

@@ -23,8 +23,8 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5432/cloud_storage
-    username: user
-    password: password
+    username: ${DB_USER:user}
+    password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 15
@@ -57,14 +57,14 @@ spring:
         concurrency: 5
         max-concurrency: 10
         prefetch: 1
-    username: guest
-    password: guest
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
 minio:
-  url: http://localhost:9000
+  url: ${MINIO_URL:http://localhost:9000}
   external-url: ${MINIO_EXTERNAL_URL:http://localhost:9000}
-  access-key: minioadmin
-  secret-key: minioadmin
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
   buckets:
     user-files: user-files
     temp-archives: temp-archives
