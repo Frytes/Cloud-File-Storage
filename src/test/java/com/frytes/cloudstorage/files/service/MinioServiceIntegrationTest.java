@@ -21,11 +21,8 @@ class MinioServiceIntegrationTest {
     @Autowired
     private MinioClient minioClient;
 
-    private final MinioProperties minioProperties;
-
-    MinioServiceIntegrationTest(MinioProperties minioProperties) {
-        this.minioProperties = minioProperties;
-    }
+    @Autowired
+    private MinioProperties minioProperties;
 
     @Test
     void shouldCreateDirectoryInMinio() {

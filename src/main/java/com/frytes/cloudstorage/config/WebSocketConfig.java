@@ -1,6 +1,7 @@
 package com.frytes.cloudstorage.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.frytes.cloudstorage.config.properties.RabbitMqProperties;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -9,29 +10,20 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    @Value("${spring.rabbitmq.stomp.host}")
-    private String relayHost;
-
-    @Value("${spring.rabbitmq.stomp.port}")
-    private int relayPort;
-
-    @Value("${spring.rabbitmq.username}")
-    private String clientLogin;
-
-    @Value("${spring.rabbitmq.password}")
-    private String clientPasscode;
+    private final RabbitMqProperties rabbitMqProperties;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         registry.enableStompBrokerRelay("/topic", "/queue")
-                .setRelayHost(relayHost)
-                .setRelayPort(relayPort)
-                .setClientLogin(clientLogin)
-                .setClientPasscode(clientPasscode)
-                .setSystemLogin(clientLogin)
-                .setSystemPasscode(clientPasscode);
+                .setRelayHost(rabbitMqProperties.stomp().host())
+                .setRelayPort(rabbitMqProperties.stomp().port())
+                .setClientLogin(rabbitMqProperties.username())
+                .setClientPasscode(rabbitMqProperties.password())
+                .setSystemLogin(rabbitMqProperties.username())
+                .setSystemPasscode(rabbitMqProperties.password());
 
         registry.setApplicationDestinationPrefixes("/app");
         registry.setUserDestinationPrefix("/user");
