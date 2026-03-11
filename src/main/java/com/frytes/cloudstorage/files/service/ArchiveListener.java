@@ -19,6 +19,7 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.zip.Deflater;
@@ -33,6 +34,7 @@ public class ArchiveListener {
     private final MinioService minioService;
     private final StringRedisTemplate redisTemplate;
     private final SimpMessagingTemplate messagingTemplate;
+    private final Executor taskExecutor;
 
     private static final int PIPE_BUFFER_SIZE = 5 * 1024 * 1024;
     private static final int TIMEOUT = 10;
@@ -88,7 +90,7 @@ public class ArchiveListener {
                 } finally {
                     closePipedOutQuietly(pipedOut, task.ticketId());
                 }
-            });
+            }, taskExecutor);
 
             minioService.uploadArchive(archiveName, pipedIn);
 

@@ -61,8 +61,8 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 5GB           # Максимальный размер одного загружаемого файла.
-      max-request-size: 5GB        # Максимальный размер всего multipart запроса
+      max-file-size: 1GB           # Максимальный размер одного загружаемого файла.
+      max-request-size: 1GB        # Максимальный размер всего multipart запроса
 
 app:
   frontend:

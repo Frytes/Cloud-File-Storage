@@ -59,20 +59,25 @@ public class FileController {
     ) {
         DownloadResponse response = fileService.processDownload(user.getId(), user.getUsername(), path);
 
-        if (response.isAsync()) {
-            return ResponseEntity.accepted().body(Map.of(
+        return switch (response.type()) {
+            case ASYNC_TASK -> ResponseEntity.accepted().body(Map.of(
                     "ticket", response.ticket(),
                     "message", "Начата архивация папки",
                     ArchiveStatus.STATUS_KEY, ArchiveStatus.IN_PROGRESS.name()
             ));
-        }
 
-        String encodedFileName = URLEncoder.encode(response.fileName(), StandardCharsets.UTF_8).replace("+", "%20");
+            case SYNC_ZIP -> buildAttachmentResponse(
+                    response.fileName(),
+                    "application/zip",
+                    response.zipStream()
+            );
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFileName + "\"")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(new InputStreamResource(response.stream()));
+            case SINGLE_FILE -> buildAttachmentResponse(
+                    response.fileName(),
+                    MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                    new InputStreamResource(response.stream())
+            );
+        };
     }
 
     @GetMapping("/download/status")
@@ -125,5 +130,13 @@ public class FileController {
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         fileService.deleteObject(user.getId(), path);
+    }
+
+    private ResponseEntity<Object> buildAttachmentResponse(String fileName, String contentType, Object body) {
+        String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFileName + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, contentType)
+                .body(body);
     }
 }

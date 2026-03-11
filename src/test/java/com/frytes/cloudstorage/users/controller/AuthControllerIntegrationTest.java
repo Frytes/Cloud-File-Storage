@@ -65,8 +65,8 @@ class AuthControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("test_user"))
                 .andExpect(jsonPath("$.role").value("USER"))
-                .andExpect(request().sessionAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, notNullValue()));
-        }
+                .andExpect(cookie().exists("SESSION"));
+    }
 
     @Test
     @DisplayName("Провал входа: неверный пароль возвращает 401 Unauthorized")
@@ -91,6 +91,6 @@ class AuthControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.username").value("new_awesome_user"))
-                .andExpect(request().sessionAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, notNullValue()));
+                .andExpect(cookie().exists("SESSION"));
     }
 }

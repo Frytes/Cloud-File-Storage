@@ -7,7 +7,7 @@ import lombok.Builder;
 public record FileDto(
         String name,
         Long size,
-        String type,
+        FileType type,
         String path,
         String lastModified
 ) {

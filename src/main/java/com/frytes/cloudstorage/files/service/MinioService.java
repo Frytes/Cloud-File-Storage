@@ -152,6 +152,28 @@ public class MinioService {
         }
     }
 
+    public void removeObjects(List<String> objectNames) {
+        try {
+            List<DeleteObject> objects = objectNames.stream()
+                    .map(DeleteObject::new)
+                    .toList();
+
+            Iterable<Result<DeleteError>> results = minioClient.removeObjects(
+                    RemoveObjectsArgs.builder()
+                            .bucket(userFilesBucket)
+                            .objects(objects)
+                            .build()
+            );
+
+            for (Result<DeleteError> result : results) {
+                DeleteError error = result.get();
+                log.error("Ошибка пакетного удаления объекта {}: {}", error.objectName(), error.message());
+            }
+        } catch (Exception e) {
+            throw new StorageOperationException("Ошибка при массовом удалении файлов", e);
+        }
+    }
+
     public void copyObject(String source, String target) {
         try {
             minioClient.copyObject(

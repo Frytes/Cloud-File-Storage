@@ -85,25 +85,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(StorageOperationException.class)
     public ResponseEntity<ErrorResponse> handleStorageOperation(StorageOperationException ex, HttpServletRequest request) {
         log.error("Storage operation failed at {}", request.getRequestURI(), ex);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Внутренняя ошибка сервиса хранилища", request);
     }
 
     @ExceptionHandler(FileUploadException.class)
     public ResponseEntity<ErrorResponse> handleFileUploadException(FileUploadException ex, HttpServletRequest request) {
         log.error("File upload failed at {}", request.getRequestURI(), ex);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Ошибка загрузки файла", request);
     }
 
     @ExceptionHandler(DirectoryCreationException.class)
     public ResponseEntity<ErrorResponse> handleDirectoryCreationException(DirectoryCreationException ex, HttpServletRequest request) {
         log.error("Directory creation failed at {}", request.getRequestURI(), ex);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Ошибка создания директории", request);
     }
 
     @ExceptionHandler(DirectoryReadException.class)
     public ResponseEntity<ErrorResponse> handleDirectoryReadException(DirectoryReadException ex, HttpServletRequest request) {
         log.error("Directory read failed at {}", request.getRequestURI(), ex);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Ошибка чтения директории", request);
     }
 
     @ExceptionHandler(Exception.class)

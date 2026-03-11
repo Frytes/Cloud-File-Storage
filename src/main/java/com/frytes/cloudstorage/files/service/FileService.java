@@ -3,7 +3,9 @@ package com.frytes.cloudstorage.files.service;
 import com.frytes.cloudstorage.common.exception.*;
 import com.frytes.cloudstorage.common.util.PathUtils;
 import com.frytes.cloudstorage.files.dto.DownloadResponse;
+import com.frytes.cloudstorage.files.dto.DownloadType;
 import com.frytes.cloudstorage.files.dto.FileDto;
+import com.frytes.cloudstorage.files.dto.FileType;
 import io.minio.Result;
 import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
@@ -11,8 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +30,8 @@ public class FileService {
     @Value("${app.search.limit:50}")
     private int searchLimit;
 
+    private static final long SYNC_ZIP_LIMIT = 100L * 1024 * 1024;
+
     public List<FileDto> getAllDirectory(Long userId, String path) {
         String processedPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
         String prefix = PathUtils.buildUserPath(userId, processedPath);
@@ -40,26 +44,21 @@ public class FileService {
                 Item item = result.get();
                 String objectName = item.objectName();
 
-                if (objectName.equals(prefix)) {
-                    continue;
-                }
+                if (objectName.equals(prefix)) continue;
 
-                FileDto dto = FileDto.builder()
+                files.add(FileDto.builder()
                         .name(PathUtils.getFileNameFromPath(objectName))
                         .size(item.size())
                         .path(path == null ? "" : path)
-                        .type(item.isDir() ? FileDto.TYPE_DIRECTORY : FileDto.TYPE_FILE)
+                        .type(item.isDir() ? FileType.DIRECTORY : FileType.FILE)
                         .lastModified(formatDate(item))
-                        .build();
-
-                files.add(dto);
+                        .build());
 
             } catch (Exception e) {
                 log.error("Ошибка при чтении файла из MinIO", e);
                 throw new DirectoryReadException("Ошибка чтения списка файлов из хранилища", e);
             }
         }
-
         return files;
     }
 
@@ -78,25 +77,22 @@ public class FileService {
                 .name(PathUtils.getFileNameFromPath(processedPath))
                 .path(path)
                 .size(0L)
-                .type(FileDto.TYPE_DIRECTORY)
+                .type(FileType.DIRECTORY)
                 .lastModified(java.time.LocalDateTime.now().toString())
                 .build();
     }
 
     public FileDto getFileInfo(Long userId, String path) {
         String cleanPath = PathUtils.sanitize(path);
-
         String objectName = PathUtils.buildUserPath(userId, cleanPath);
-
         var stat = minioService.getMetadata(objectName);
-
         boolean isDir = cleanPath.endsWith("/");
 
         return FileDto.builder()
                 .name(PathUtils.getFileNameFromPath(cleanPath))
                 .path(cleanPath)
                 .size(stat.size())
-                .type(isDir ? FileDto.TYPE_DIRECTORY : FileDto.TYPE_FILE)
+                .type(isDir ? FileType.DIRECTORY : FileType.FILE)
                 .lastModified(stat.lastModified().toString())
                 .build();
     }
@@ -105,22 +101,25 @@ public class FileService {
         String directoryPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
 
         for (MultipartFile file : files) {
-            if (file.isEmpty()) {
+            String originalFilename = file.getOriginalFilename();
+
+            if (file.isEmpty() || originalFilename == null || originalFilename.isBlank()) {
+                log.warn("Попытка загрузки пустого файла или файла без имени. Пропускаем.");
                 continue;
             }
 
-            String fullPath = directoryPath + file.getOriginalFilename();
+            String fullPath = directoryPath + originalFilename;
             String objectName = PathUtils.buildUserPath(userId, fullPath);
 
             if (minioService.isObjectExist(objectName)) {
-                throw new ResourceAlreadyExistsException("Файл " + file.getOriginalFilename() + " уже существует");
+                throw new ResourceAlreadyExistsException("Файл " + originalFilename + " уже существует");
             }
 
-            try {
-                minioService.upload(objectName, file.getInputStream(), file.getContentType());
-            } catch (IOException e) {
-                log.error("Ошибка при чтении файла: {}", file.getOriginalFilename(), e);
-                throw new FileUploadException("Не удалось прочитать файл " + file.getOriginalFilename(), e);
+            try (InputStream is = file.getInputStream()) {
+                minioService.upload(objectName, is, file.getContentType());
+            } catch (Exception e) {
+                log.error("Ошибка при загрузке файла: {}", originalFilename, e);
+                throw new FileUploadException("Не удалось сохранить файл " + originalFilename, e);
             }
         }
     }
@@ -130,14 +129,26 @@ public class FileService {
 
         if (isFolder) {
             Long totalSize = calculateFolderSize(userId, path);
-            String ticket = archiveService.sendArchivingTask(userId, username, path, totalSize);
-            return new DownloadResponse(true, ticket, null, null);
+
+            if (totalSize < SYNC_ZIP_LIMIT) {
+                StreamingResponseBody zipStream = archiveService.createSyncZipStream(userId, path);
+                String fileName = PathUtils.getFileNameFromPath(path);
+                fileName = fileName.substring(0, fileName.length() - 1) + ".zip";
+
+                return new DownloadResponse(DownloadType.SYNC_ZIP, null, null, zipStream, fileName);
+            } else {
+                String ticket = archiveService.sendArchivingTask(userId, username, path, totalSize);
+
+                return new DownloadResponse(DownloadType.ASYNC_TASK, ticket, null, null, null);
+            }
         } else {
             InputStream inputStream = downloadFile(userId, path);
             String fileName = PathUtils.getFileNameFromPath(path);
-            return new DownloadResponse(false, null, inputStream, fileName);
+
+            return new DownloadResponse(DownloadType.SINGLE_FILE, null, inputStream, null, fileName);
         }
     }
+
 
     public List<FileDto> searchUserFiles(Long userId, String query) {
         String prefix = PathUtils.buildUserPath(userId, "");
@@ -147,21 +158,18 @@ public class FileService {
         String lowerQuery = query.toLowerCase();
 
         for (Result<Item> result : results) {
-            if (foundFiles.size() >= searchLimit) {
-                break;
-            }
+            if (foundFiles.size() >= searchLimit) break;
             try {
                 Item item = result.get();
                 String objectName = item.objectName();
                 String fileName = PathUtils.getFileNameFromPath(objectName);
                 if (fileName.toLowerCase().contains(lowerQuery)) {
                     String userPath = objectName.substring(prefix.length());
-
                     foundFiles.add(FileDto.builder()
                             .name(fileName)
                             .size(item.size())
                             .path(userPath)
-                            .type(item.isDir() ? FileDto.TYPE_DIRECTORY : FileDto.TYPE_FILE)
+                            .type(item.isDir() ? FileType.DIRECTORY : FileType.FILE)
                             .lastModified(item.lastModified().toString())
                             .build());
                 }
@@ -231,53 +239,36 @@ public class FileService {
             }
         }
 
-        boolean hasErrors = false;
-        for (String oldKey : successfullyCopiedSources) {
-            try {
-                minioService.removeObject(oldKey);
-            } catch (Exception e) {
-                log.error("Не удалось удалить оригинал после копирования: {}", e.getMessage());
-                hasErrors = true;
-            }
-        }
-
-        if (hasErrors) {
-            throw new StorageOperationException("Папка скопирована, но некоторые старые файлы не удалось удалить.");
+        if (!successfullyCopiedSources.isEmpty()) {
+            minioService.removeObjects(successfullyCopiedSources);
         }
     }
 
     private void rollbackMovedFiles(List<String> targetKeys) {
-        for (String targetKey : targetKeys) {
-            try {
-                minioService.removeObject(targetKey);
-            } catch (Exception e) {
-                log.error("КРИТИЧЕСКАЯ ОШИБКА ОТКАТА! Не удалось удалить файл: {}", targetKey, e);
-            }
+        if (!targetKeys.isEmpty()) {
+            minioService.removeObjects(targetKeys);
         }
     }
 
     private void deleteFolderRecursively(String prefix) {
         Iterable<Result<Item>> objects = minioService.listObjectsRecursive(prefix);
-        boolean hasErrors = false;
+        List<String> keysToDelete = new ArrayList<>();
 
         for (Result<Item> result : objects) {
             try {
-                minioService.removeObject(result.get().objectName());
+                keysToDelete.add(result.get().objectName());
             } catch (Exception e) {
-                log.error("Не удалось удалить объект: {}", e.getMessage());
-                hasErrors = true;
+                log.error("Не удалось прочитать объект для удаления: {}", e.getMessage());
             }
         }
 
-        if (hasErrors) {
-            throw new StorageOperationException("Папка удалена частично. Некоторые файлы не удалось удалить.");
+        if (!keysToDelete.isEmpty()) {
+            minioService.removeObjects(keysToDelete);
         }
     }
 
     private Long calculateFolderSize(Long userId, String path) {
-        String prefix = PathUtils.buildUserPath(userId, PathUtils.sanitize(path));
-        prefix = PathUtils.ensureTrailingSlash(prefix);
-
+        String prefix = PathUtils.ensureTrailingSlash(PathUtils.buildUserPath(userId, PathUtils.sanitize(path)));
         Iterable<Result<Item>> results = minioService.listObjectsRecursive(prefix);
         long totalSize = 0L;
 
