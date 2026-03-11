@@ -4,6 +4,7 @@ import com.frytes.cloudstorage.common.exception.ResourceNotFoundException;
 import com.frytes.cloudstorage.common.exception.StorageOperationException;
 import com.frytes.cloudstorage.common.util.PathUtils;
 import com.frytes.cloudstorage.config.RabbitMQConfig;
+import com.frytes.cloudstorage.config.properties.AppProperties;
 import com.frytes.cloudstorage.files.dto.ArchiveStatus;
 import com.frytes.cloudstorage.files.dto.ArchiveTask;
 import io.minio.Result;
@@ -11,7 +12,6 @@ import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -31,9 +31,7 @@ public class ArchiveService {
     private final RabbitTemplate rabbitTemplate;
     private final StringRedisTemplate redisTemplate;
     private final MinioService minioService;
-
-    @Value("${app.archive.expiration-hours:24}")
-    private long expirationHours;
+    private final AppProperties appProperties;
 
     public String sendArchivingTask(Long userId, String username, String path, Long totalSize) {
         String ticketId = UUID.randomUUID().toString();
@@ -77,7 +75,7 @@ public class ArchiveService {
         if (status == ArchiveStatus.READY) {
             String archiveName = "user-" + userId + "-files/archive-" + ticket + ".zip";
             String url = minioService.getPresignedUrl(archiveName);
-            return status.toResponse(url, expirationHours * 3600);
+            return status.toResponse(url, appProperties.archive().expirationHours() * 3600);
         }
 
         return status.toResponse(null, null);

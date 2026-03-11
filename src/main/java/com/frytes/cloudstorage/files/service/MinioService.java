@@ -3,13 +3,14 @@ package com.frytes.cloudstorage.files.service;
 import com.frytes.cloudstorage.common.exception.DirectoryCreationException;
 import com.frytes.cloudstorage.common.exception.FileUploadException;
 import com.frytes.cloudstorage.common.exception.StorageOperationException;
+import com.frytes.cloudstorage.config.properties.AppProperties;
+import com.frytes.cloudstorage.config.properties.MinioProperties;
 import io.minio.*;
 import io.minio.http.Method;
 import io.minio.messages.*;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -24,21 +25,22 @@ public class MinioService {
     private final MinioClient minioClient;
     private final MinioClient signerMinioClient;
 
-    public static final int STREAM_PART_SIZE = 10 * 1024 * 1024
-            ;
-    @Value("${minio.buckets.user-files}")
-    private String userFilesBucket;
+    private final String userFilesBucket;
+    private final String tempArchivesBucket;
+    private final int expirationHours;
 
-    @Value("${minio.buckets.temp-archives}")
-    private String tempArchivesBucket;
-
-    @Value("${app.archive.expiration-hours:24}")
-    private int expirationHours;
+    public static final int STREAM_PART_SIZE = 10 * 1024 * 1024;
 
     public MinioService(MinioClient minioClient,
-                        @Qualifier("signerMinioClient") MinioClient signerMinioClient) {
+                        @Qualifier("signerMinioClient") MinioClient signerMinioClient,
+                        MinioProperties minioProperties,
+                        AppProperties appProperties) {
         this.minioClient = minioClient;
         this.signerMinioClient = signerMinioClient;
+
+        this.userFilesBucket = minioProperties.buckets().userFiles();
+        this.tempArchivesBucket = minioProperties.buckets().tempArchives();
+        this.expirationHours = (int) appProperties.archive().expirationHours();
     }
 
     @PostConstruct
@@ -219,7 +221,6 @@ public class MinioService {
             throw new StorageOperationException("Ошибка при проверке объекта", e);
         }
     }
-
 
     private void configureLifecyclePolicy(String bucketName) {
         try {

@@ -1,24 +1,24 @@
 package com.frytes.cloudstorage.config;
 
 
-import org.springframework.beans.factory.annotation.Value;
+import com.frytes.cloudstorage.config.properties.AppProperties;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@RequiredArgsConstructor
 public class TomcatConfig {
 
-    @Value("${app.upload.max-files-per-request:10000}")
-    private int maxFiles;
+    private final AppProperties appProperties;
 
     @Bean
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> tomcatCustomizer() {
         return factory -> factory.addConnectorCustomizers(connector -> {
-
-            connector.setMaxParameterCount(maxFiles);
-            connector.setProperty("maxPartCount", String.valueOf(maxFiles));
+            connector.setMaxParameterCount(appProperties.upload().maxFilesPerRequest());
+            connector.setProperty("maxPartCount", String.valueOf(appProperties.upload().maxFilesPerRequest()));
 
         });
     }

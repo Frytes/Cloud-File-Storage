@@ -1,8 +1,8 @@
 package com.frytes.cloudstorage.config;
 
+import com.frytes.cloudstorage.config.properties.AppProperties;
 import com.frytes.cloudstorage.users.security.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -29,8 +29,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Value("${app.frontend.url}")
-    private String frontendUrl;
+    private final AppProperties appProperties;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -62,7 +61,7 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )
-                        .successHandler(new SimpleUrlAuthenticationSuccessHandler(frontendUrl))
+                        .successHandler(new SimpleUrlAuthenticationSuccessHandler(appProperties.frontend().url()))
                 )
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))

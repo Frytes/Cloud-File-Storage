@@ -1,11 +1,11 @@
 package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.TestcontainersConfiguration;
+import com.frytes.cloudstorage.config.properties.MinioProperties;
 import io.minio.MinioClient;
 import io.minio.StatObjectArgs;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 
@@ -21,8 +21,11 @@ class MinioServiceIntegrationTest {
     @Autowired
     private MinioClient minioClient;
 
-    @Value("${minio.buckets.user-files}")
-    private String userFilesBucket;
+    private final MinioProperties minioProperties;
+
+    MinioServiceIntegrationTest(MinioProperties minioProperties) {
+        this.minioProperties = minioProperties;
+    }
 
     @Test
     void shouldCreateDirectoryInMinio() {
@@ -32,7 +35,7 @@ class MinioServiceIntegrationTest {
 
         assertThatCode(() -> minioClient.statObject(
                 StatObjectArgs.builder()
-                        .bucket(userFilesBucket)
+                        .bucket(minioProperties.buckets().userFiles())
                         .object(folderName)
                         .build()
         )).doesNotThrowAnyException();

@@ -3,6 +3,7 @@ package com.frytes.cloudstorage.files.service;
 import com.frytes.cloudstorage.common.exception.ArchiveCreationException;
 import com.frytes.cloudstorage.common.util.PathUtils;
 import com.frytes.cloudstorage.config.RabbitMQConfig;
+import com.frytes.cloudstorage.config.properties.AppProperties;
 import com.frytes.cloudstorage.files.dto.ArchiveStatus;
 import com.frytes.cloudstorage.files.dto.ArchiveTask;
 import io.minio.Result;
@@ -10,7 +11,6 @@ import io.minio.messages.Item;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -35,21 +35,21 @@ public class ArchiveListener {
     private final StringRedisTemplate redisTemplate;
     private final SimpMessagingTemplate messagingTemplate;
     private final TaskExecutor applicationTaskExecutor;
+    private final AppProperties appProperties;
 
     private static final int PIPE_BUFFER_SIZE = 5 * 1024 * 1024;
     private static final int TIMEOUT = 10;
 
-    @Value("${app.archive.expiration-hours:24}")
-    private long expirationHours;
-
     public ArchiveListener(MinioService minioService,
                            StringRedisTemplate redisTemplate,
                            SimpMessagingTemplate messagingTemplate,
-                           @Qualifier("archiveTaskExecutor") TaskExecutor applicationTaskExecutor) {
+                           @Qualifier("archiveTaskExecutor") TaskExecutor applicationTaskExecutor,
+                           AppProperties appProperties) {
         this.minioService = minioService;
         this.redisTemplate = redisTemplate;
         this.messagingTemplate = messagingTemplate;
         this.applicationTaskExecutor = applicationTaskExecutor;
+        this.appProperties = appProperties;
     }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
@@ -57,7 +57,7 @@ public class ArchiveListener {
         log.info("📦 [Ticket: {}] Начало архивации", task.ticketId());
 
         String redisKey = "archive:status:" + task.ticketId();
-        redisTemplate.expire(redisKey, expirationHours, TimeUnit.HOURS);
+        redisTemplate.expire(redisKey, appProperties.archive().expirationHours(), TimeUnit.HOURS);
 
         String archiveName = "user-" + task.userId() + "-files/archive-" + task.ticketId() + ".zip";
 
@@ -95,7 +95,7 @@ public class ArchiveListener {
             zipFuture.get(TIMEOUT, TimeUnit.MINUTES);
 
             log.info("✅ [Ticket: {}] Архив успешно загружен", task.ticketId());
-            redisTemplate.opsForValue().set(redisKey, ArchiveStatus.READY.name(), expirationHours, TimeUnit.HOURS);
+            redisTemplate.opsForValue().set(redisKey, ArchiveStatus.READY.name(), appProperties.archive().expirationHours(), TimeUnit.HOURS);
 
             String downloadUrl = minioService.getPresignedUrl(archiveName);
             sendWebSocketMessage(task, ArchiveStatus.READY.name(), "downloadUrl", downloadUrl);

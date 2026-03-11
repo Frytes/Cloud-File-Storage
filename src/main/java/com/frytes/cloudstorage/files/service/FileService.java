@@ -2,6 +2,7 @@ package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.common.exception.*;
 import com.frytes.cloudstorage.common.util.PathUtils;
+import com.frytes.cloudstorage.config.properties.AppProperties;
 import com.frytes.cloudstorage.files.dto.DownloadResponse;
 import com.frytes.cloudstorage.files.dto.DownloadType;
 import com.frytes.cloudstorage.files.dto.FileDto;
@@ -10,7 +11,6 @@ import io.minio.Result;
 import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -26,9 +26,7 @@ public class FileService {
 
     private final MinioService minioService;
     private final ArchiveService archiveService;
-
-    @Value("${app.search.limit:50}")
-    private int searchLimit;
+    private final AppProperties appProperties;
 
     private static final long SYNC_ZIP_LIMIT = 100L * 1024 * 1024;
 
@@ -158,7 +156,9 @@ public class FileService {
         String lowerQuery = query.toLowerCase();
 
         for (Result<Item> result : results) {
-            if (foundFiles.size() >= searchLimit) break;
+            if (foundFiles.size() >= appProperties.search().limit()) {
+                break;
+            }
             try {
                 Item item = result.get();
                 String objectName = item.objectName();

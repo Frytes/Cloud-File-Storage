@@ -83,9 +83,8 @@ public class FileController {
     @GetMapping("/download/status")
     public ResponseEntity<Map<String, String>> checkDownloadStatus(
             @RequestParam("ticket") String ticket,
-            @AuthenticationPrincipal CustomUserDetails user // ДОБАВИЛИ ЮЗЕРА!
+            @AuthenticationPrincipal CustomUserDetails user
     ) {
-        // Передаем userId в сервис
         Map<String, String> result = archiveService.getArchiveStatus(ticket, user.getId());
 
         String currentStatus = result.get(ArchiveStatus.STATUS_KEY);

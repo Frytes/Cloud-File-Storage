@@ -1,43 +1,34 @@
 package com.frytes.cloudstorage.config;
 
+import com.frytes.cloudstorage.config.properties.MinioProperties;
 import io.minio.MinioClient;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 @Configuration
+@RequiredArgsConstructor
 public class MinioConfig {
 
-    @Value("${minio.url}")
-    private String internalUrl;
-
-    @Value("${minio.external-url}")
-    private String externalUrl;
-
-    @Value("${minio.access-key}")
-    private String accessKey;
-
-    @Value("${minio.secret-key}")
-    private String secretKey;
+    private final MinioProperties minioProperties;
 
     @Bean
     @Primary
     public MinioClient minioClient() {
         return MinioClient.builder()
-                .endpoint(internalUrl)
-                .credentials(accessKey, secretKey)
+                .endpoint(minioProperties.url())
+                .credentials(minioProperties.accessKey(), minioProperties.secretKey())
                 .build();
     }
 
     @Bean(name = "signerMinioClient")
     public MinioClient signerMinioClient() {
-
-        String endpoint = (externalUrl != null && !externalUrl.isBlank()) ? externalUrl : internalUrl;
-
+        String extUrl = minioProperties.externalUrl();
+        String endpoint = (extUrl != null && !extUrl.isBlank()) ? extUrl : minioProperties.url();
         return MinioClient.builder()
                 .endpoint(endpoint)
-                .credentials(accessKey, secretKey)
+                .credentials(minioProperties.accessKey(), minioProperties.secretKey())
                 .build();
     }
 }
