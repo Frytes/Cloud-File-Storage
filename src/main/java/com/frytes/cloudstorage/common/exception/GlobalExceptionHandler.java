@@ -2,11 +2,11 @@ package com.frytes.cloudstorage.common.exception;
 
 import com.frytes.cloudstorage.common.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
@@ -22,134 +21,94 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // 400 ??
+    // === 4xx CLIENT ERRORS (INFO / WARN - Без StackTrace) ===
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(
-            MethodArgumentNotValidException ex,
-            HttpServletRequest request
-    ) {
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
         String message = ex.getBindingResult().getAllErrors().stream()
                 .map(DefaultMessageSourceResolvable::getDefaultMessage)
                 .collect(Collectors.joining("; "));
 
+        log.info("Validation failed [{}]: {}", request.getRequestURI(), message);
         return buildResponse(HttpStatus.BAD_REQUEST, message, request);
     }
 
-    // 400
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleConstraintViolation(
-            ConstraintViolationException ex,
-            HttpServletRequest request
-    ) {
-        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(jakarta.validation.ConstraintViolationException ex, HttpServletRequest request) {
+        String message = ex.getConstraintViolations().stream()
+                .map(jakarta.validation.ConstraintViolation::getMessage)
+                .collect(Collectors.joining("; "));
+
+        log.info("Constraint violation [{}]: {}", request.getRequestURI(), message);
+        return buildResponse(HttpStatus.BAD_REQUEST, message, request);
     }
 
-    // 401
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleBadCredentials(
-            BadCredentialsException ex,
-            HttpServletRequest request
-    ) {
+    @ExceptionHandler({BadCredentialsException.class, UsernameNotFoundException.class})
+    public ResponseEntity<ErrorResponse> handleAuthErrors(Exception ex, HttpServletRequest request) {
+        log.warn("Authentication failed [{}]: {}", request.getRequestURI(), ex.getMessage());
         return buildResponse(HttpStatus.UNAUTHORIZED, "Неверное имя пользователя или пароль", request);
     }
 
-    // 401
-    @ExceptionHandler(UsernameNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleUsernameNotFound(
-            UsernameNotFoundException ex,
-            HttpServletRequest request
-    ) {
-        return buildResponse(HttpStatus.UNAUTHORIZED, "Неверное имя пользователя или пароль", request);
-    }
-
-    // 403
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleAccessDenied(
-            AccessDeniedException ex,
-            HttpServletRequest request
-    ) {
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        log.warn("Access denied [{}]: {}", request.getRequestURI(), ex.getMessage());
         return buildResponse(HttpStatus.FORBIDDEN, "Доступ запрещен", request);
     }
 
-    //404
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleResourceNotFound(
-            ResourceNotFoundException ex,
-            HttpServletRequest request
-    ) {
+    public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
+        log.info("Resource not found [{}]: {}", request.getRequestURI(), ex.getMessage());
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
-    // 409
     @ExceptionHandler(UserAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleUserAlreadyExists(
-            UserAlreadyExistsException ex,
-            HttpServletRequest request
-    ) {
+    public ResponseEntity<ErrorResponse> handleUserAlreadyExists(UserAlreadyExistsException ex, HttpServletRequest request) {
+        log.info("Conflict [{}]: {}", request.getRequestURI(), ex.getMessage());
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
-    // 413
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<ErrorResponse> handleMaxSizeException(
-            MaxUploadSizeExceededException ex,
-            HttpServletRequest request
-    ) {
+    public ResponseEntity<ErrorResponse> handleMaxSizeException(MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        log.warn("Payload too large [{}]: {}", request.getRequestURI(), ex.getMessage());
         return buildResponse(HttpStatus.PAYLOAD_TOO_LARGE, "Размер файла превышает допустимый лимит", request);
     }
 
-    //500
+
+    // === 5xx SERVER ERRORS (ERROR - Со StackTrace) ===
+
     @ExceptionHandler(StorageOperationException.class)
-    public ResponseEntity<ErrorResponse> handleStorageOperation(
-            StorageOperationException ex,
-            HttpServletRequest request
-    ) {
+    public ResponseEntity<ErrorResponse> handleStorageOperation(StorageOperationException ex, HttpServletRequest request) {
+        log.error("Storage operation failed at {}", request.getRequestURI(), ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
     }
 
-    // 500
     @ExceptionHandler(FileUploadException.class)
-    public ResponseEntity<ErrorResponse> handleFileUploadException(
-            FileUploadException ex,
-            HttpServletRequest request
-    ) {
+    public ResponseEntity<ErrorResponse> handleFileUploadException(FileUploadException ex, HttpServletRequest request) {
+        log.error("File upload failed at {}", request.getRequestURI(), ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
     }
 
-    // 500
+    @ExceptionHandler(DirectoryCreationException.class)
+    public ResponseEntity<ErrorResponse> handleDirectoryCreationException(DirectoryCreationException ex, HttpServletRequest request) {
+        log.error("Directory creation failed at {}", request.getRequestURI(), ex);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(DirectoryReadException.class)
+    public ResponseEntity<ErrorResponse> handleDirectoryReadException(DirectoryReadException ex, HttpServletRequest request) {
+        log.error("Directory read failed at {}", request.getRequestURI(), ex);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleAll(
-            Exception ex,
-            HttpServletRequest request
-    ) {
-        log.error("Unexpected error", ex);
+    public ResponseEntity<ErrorResponse> handleAll(Exception ex, HttpServletRequest request) {
+        log.error("Unexpected system error at {}", request.getRequestURI(), ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Внутренняя ошибка сервера", request);
     }
 
-    // 500
-    @ExceptionHandler(DirectoryCreationException.class)
-    public ResponseEntity<ErrorResponse> handleDirectoryCreationException(
-            DirectoryCreationException ex,
-            HttpServletRequest request
-    ) {
-        log.error("Ошибка при создании папки: ", ex);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
-    }
+    // === UTILS ===
 
-    // 500
-    @ExceptionHandler(DirectoryReadException.class)
-    public ResponseEntity<ErrorResponse> handleDirectoryReadException(
-            DirectoryReadException ex,
-            HttpServletRequest request
-    ) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request);
-    }
-
-    private ResponseEntity<ErrorResponse> buildResponse(
-            HttpStatus status,
-            String message,
-            HttpServletRequest request
-    ) {
+    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String message, HttpServletRequest request) {
         ErrorResponse errorResponse = new ErrorResponse(
                 status.value(),
                 status.getReasonPhrase(),

@@ -6,6 +6,8 @@ import com.frytes.cloudstorage.files.dto.FileDto;
 import com.frytes.cloudstorage.files.service.ArchiveService;
 import com.frytes.cloudstorage.files.service.FileService;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -13,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+@Validated
 @RestController
 @RequestMapping("/api/resource")
 @RequiredArgsConstructor
@@ -39,7 +43,10 @@ public class FileController {
 
     @GetMapping("/search")
     public List<FileDto> searchFiles(
-            @RequestParam("query") String query,
+            @RequestParam("query")
+            @NotBlank(message = "Поисковой запрос не может быть пустым")
+            String query,
+
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         return fileService.searchUserFiles(user.getId(), query);
@@ -86,9 +93,9 @@ public class FileController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public void uploadFiles(
-                             @RequestParam("path") String path,
-                             @RequestParam("object") List<MultipartFile> files,
-                             @AuthenticationPrincipal CustomUserDetails user
+            @RequestParam("path") String path,
+            @RequestParam("object") List<MultipartFile> files,
+            @AuthenticationPrincipal CustomUserDetails user
     ) {
 
         fileService.uploadFiles(user.getId(), path, files);
@@ -97,8 +104,15 @@ public class FileController {
     @PostMapping("/move")
     @ResponseStatus(HttpStatus.OK)
     public void moveFile(
-            @RequestParam("from") String from,
-            @RequestParam("to") String to,
+            @RequestParam("from")
+            @NotBlank(message = "Исходный путь обязателен")
+            String from,
+
+            @RequestParam("to")
+            @NotBlank(message = "Целевой путь обязателен")
+            @Pattern(regexp = "^(?!.*\\.\\.).*", message = "Недопустимый путь")
+            String to,
+
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         fileService.moveObject(user.getId(), from, to);
@@ -107,7 +121,10 @@ public class FileController {
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteFile(
-            @RequestParam("path") String path,
+            @RequestParam("path")
+            @NotBlank(message = "Путь для удаления не может быть пустым")
+            String path,
+
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         fileService.deleteObject(user.getId(), path);
