@@ -63,3 +63,17 @@ jobs:
           docker compose down --remove-orphans
           docker compose up -d --build
           docker image prune -f
+
+      - name: Wait for Spring Boot to start
+        run: sleep 20
+
+      - name: Run E2E Tests
+        run: ./mvnw test -Dtest=*E2ETest
+
+      - name: Auto-Rollback on E2E Failure
+        if: failure()
+        run: |
+            git checkout HEAD~1
+            ./mvnw clean package -DskipTests
+            docker compose down --remove-orphans
+            docker compose up -d --build
