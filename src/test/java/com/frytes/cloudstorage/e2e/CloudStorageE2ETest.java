@@ -18,8 +18,13 @@ class CloudStorageE2ETest {
     static void setup() {
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--no-proxy-server");
+        options.addArguments("--headless=new");
+        options.addArguments("--no-sandbox");
+        options.addArguments("--disable-dev-shm-usage");
+
         Configuration.browserCapabilities = options;
 
+        Configuration.headless = true;
         Configuration.baseUrl = "http://192.168.0.14";
         Configuration.browserSize = "1920x1080";
         Configuration.timeout = 10000;
