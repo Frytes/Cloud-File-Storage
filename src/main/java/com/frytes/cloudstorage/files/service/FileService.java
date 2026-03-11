@@ -10,6 +10,7 @@ import io.minio.Result;
 import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,6 +26,9 @@ public class FileService {
 
     private final MinioService minioService;
     private final ArchiveService archiveService;
+
+    @Value("${app.search.limit:50}")
+    private int searchLimit;
 
     public FileDto createDirectory(Long userId, String path) {
         String processedPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
@@ -166,6 +170,9 @@ public class FileService {
         String lowerQuery = query.toLowerCase();
 
         for (Result<Item> result : results) {
+            if (foundFiles.size() >= searchLimit) {
+                break;
+            }
             try {
                 Item item = result.get();
                 String objectName = item.objectName();

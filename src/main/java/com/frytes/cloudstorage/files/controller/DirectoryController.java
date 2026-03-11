@@ -32,9 +32,11 @@ public class DirectoryController {
 
     @PostMapping
     public ResponseEntity<FileDto> createDirectory(
-            @RequestParam("path") String path,
+            @RequestParam("path")
             @NotBlank(message = "Название папки не может быть пустым")
             @Pattern(regexp = "^(?!.*\\.\\.).*", message = "Недопустимый путь: нельзя использовать '../'")
+            String path,
+
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         FileDto newDirectory = fileService.createDirectory(user.getId(), path);

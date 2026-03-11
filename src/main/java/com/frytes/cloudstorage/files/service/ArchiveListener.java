@@ -82,8 +82,8 @@ public class ArchiveListener {
                 } finally {
                     try {
                         pipedOut.close();
-                    } catch (Exception ignored) {
-                        // Игнорируем ошибку закрытия
+                    } catch (Exception e) {
+                        log.warn("Не удалось корректно закрыть поток pipedOut для тикета {}", task.ticketId(), e);
                     }
                 }
             });

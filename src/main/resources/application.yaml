@@ -70,5 +70,9 @@ minio:
     temp-archives: temp-archives
 
 app:
+  frontend:
+    url: ${FRONTEND_URL:http://localhost/files}
+  search:
+    limit: 50
   upload:
     max-files-per-request: 10000
