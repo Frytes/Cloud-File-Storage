@@ -20,6 +20,7 @@ import java.io.PipedOutputStream;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -33,6 +34,8 @@ public class ArchiveListener {
     private final StringRedisTemplate redisTemplate;
     private final SimpMessagingTemplate messagingTemplate;
 
+    private static final int PIPE_BUFFER_SIZE = 5 * 1024 * 1024;
+
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void listen(ArchiveTask task) {
         log.info("📦 [Ticket: {}] Начало архивации. Путь: {}, Размер: ~{} MB",
@@ -45,9 +48,9 @@ public class ArchiveListener {
         String sourcePrefix = PathUtils.buildUserPath(task.userId(), PathUtils.sanitize(task.path()));
         String finalSourcePrefix = PathUtils.ensureTrailingSlash(sourcePrefix);
 
-        int pipeBufferSize = 5 * 1024 * 1024;
 
-        try (PipedInputStream pipedIn = new PipedInputStream(pipeBufferSize);
+
+        try (PipedInputStream pipedIn = new PipedInputStream(PIPE_BUFFER_SIZE);
              PipedOutputStream pipedOut = new PipedOutputStream(pipedIn)) {
 
             CompletableFuture<Void> zipFuture = CompletableFuture.runAsync(() -> {
@@ -60,7 +63,9 @@ public class ArchiveListener {
 
                     for (Result<Item> result : results) {
                         Item item = result.get();
-                        if (item.isDir()) continue;
+                        if (item.isDir()) {
+                            continue;
+                        }
 
                         String objectName = item.objectName();
                         String entryName = objectName.substring(finalSourcePrefix.length());
@@ -80,42 +85,53 @@ public class ArchiveListener {
                 } catch (Exception e) {
                     throw new ArchiveCreationException("Failed to zip", e);
                 } finally {
-                    try {
-                        pipedOut.close();
-                    } catch (Exception e) {
-                        log.warn("Не удалось корректно закрыть поток pipedOut для тикета {}", task.ticketId(), e);
-                    }
+                    closePipedOutQuietly(pipedOut, task.ticketId());
                 }
             });
 
             minioService.uploadArchive(archiveName, pipedIn);
-            zipFuture.join();
+
+            zipFuture.get(10, TimeUnit.MINUTES);
 
             log.info("✅ [Ticket: {}] Архив успешно загружен в MinIO: {}", task.ticketId(), archiveName);
             redisTemplate.opsForValue().set(redisKey, ArchiveStatus.READY.name(), 24, TimeUnit.HOURS);
 
             String downloadUrl = minioService.getPresignedUrl(archiveName);
-            messagingTemplate.convertAndSendToUser(
-                    task.username(),
-                    "/queue/archive",
-                    Map.of(
-                            ArchiveStatus.STATUS_KEY, ArchiveStatus.READY.name(),
-                            "ticket", task.ticketId(),
-                            "url", downloadUrl
-                    )
-            );
+            sendWebSocketMessage(task, ArchiveStatus.READY.name(), "url", downloadUrl);
 
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("❌ [Ticket: {}] Архивация прервана потоком", task.ticketId(), e);
+            handleError(task, redisKey);
+        } catch (TimeoutException e) {
+            log.error("❌ [Ticket: {}] Превышено время ожидания архивации", task.ticketId(), e);
+            handleError(task, redisKey);
         } catch (Exception e) {
             log.error("❌ [Ticket: {}] Ошибка при архивации", task.ticketId(), e);
-            redisTemplate.opsForValue().set(redisKey, ArchiveStatus.ERROR.name(), 24, TimeUnit.HOURS);
-            messagingTemplate.convertAndSendToUser(
-                    task.username(),
-                    "/queue/archive",
-                    Map.of(
-                            ArchiveStatus.STATUS_KEY, ArchiveStatus.ERROR.name(),
-                            "message", "Ошибка при создании архива"
-                    )
-            );
+            handleError(task, redisKey);
         }
+    }
+
+    private void closePipedOutQuietly(PipedOutputStream pipedOut, String ticketId) {
+        try {
+            if (pipedOut != null) {
+                pipedOut.close();
+            }
+        } catch (Exception e) {
+            log.warn("Не удалось корректно закрыть поток pipedOut для тикета {}", ticketId, e);
+        }
+    }
+
+    private void handleError(ArchiveTask task, String redisKey) {
+        redisTemplate.opsForValue().set(redisKey, ArchiveStatus.ERROR.name(), 24, TimeUnit.HOURS);
+        sendWebSocketMessage(task, ArchiveStatus.ERROR.name(), "message", "Ошибка при создании архива");
+    }
+
+    private void sendWebSocketMessage(ArchiveTask task, String status, String key, String value) {
+        messagingTemplate.convertAndSendToUser(
+                task.username(),
+                "/queue/archive",
+                Map.of(ArchiveStatus.STATUS_KEY, status, key, value, "ticket", task.ticketId())
+        );
     }
 }

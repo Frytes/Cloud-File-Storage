@@ -30,6 +30,41 @@ public class FileService {
     @Value("${app.search.limit:50}")
     private int searchLimit;
 
+    public List<FileDto> getAllDirectory(Long userId, String path) {
+        String processedPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
+        String prefix = PathUtils.buildUserPath(userId, processedPath);
+
+        Iterable<Result<Item>> results = minioService.listObjects(prefix);
+        List<FileDto> files = new ArrayList<>();
+
+        for (Result<Item> result : results) {
+            try {
+                Item item = result.get();
+                String objectName = item.objectName();
+
+                if (objectName.equals(prefix)) {
+                    continue;
+                }
+
+                FileDto dto = FileDto.builder()
+                        .name(PathUtils.getFileNameFromPath(objectName))
+                        .size(item.size())
+                        .path(path == null ? "" : path)
+                        .type(item.isDir() ? FileDto.TYPE_DIRECTORY : FileDto.TYPE_FILE)
+                        .lastModified(formatDate(item))
+                        .build();
+
+                files.add(dto);
+
+            } catch (Exception e) {
+                log.error("Ошибка при чтении файла из MinIO", e);
+                throw new DirectoryReadException("Ошибка чтения списка файлов из хранилища", e);
+            }
+        }
+
+        return files;
+    }
+
     public FileDto createDirectory(Long userId, String path) {
         String processedPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
         String objectName = PathUtils.buildUserPath(userId, processedPath);
@@ -42,6 +77,24 @@ public class FileService {
                 .size(0L)
                 .type(FileDto.TYPE_DIRECTORY)
                 .lastModified(java.time.LocalDateTime.now().toString())
+                .build();
+    }
+
+    public FileDto getFileInfo(Long userId, String path) {
+        String cleanPath = PathUtils.sanitize(path);
+
+        String objectName = PathUtils.buildUserPath(userId, cleanPath);
+
+        var stat = minioService.getMetadata(objectName);
+
+        boolean isDir = cleanPath.endsWith("/");
+
+        return FileDto.builder()
+                .name(PathUtils.getFileNameFromPath(cleanPath))
+                .path(cleanPath)
+                .size(stat.size())
+                .type(isDir ? FileDto.TYPE_DIRECTORY : FileDto.TYPE_FILE)
+                .lastModified(stat.lastModified().toString())
                 .build();
     }
 
@@ -79,89 +132,6 @@ public class FileService {
         }
     }
 
-    public List<FileDto> getAllDirectory(Long userId, String path) {
-        String processedPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
-        String prefix = PathUtils.buildUserPath(userId, processedPath);
-
-        Iterable<Result<Item>> results = minioService.listObjects(prefix);
-        List<FileDto> files = new ArrayList<>();
-
-        for (Result<Item> result : results) {
-            try {
-                Item item = result.get();
-                String objectName = item.objectName();
-
-                if (objectName.equals(prefix)) {
-                    continue;
-                }
-
-                FileDto dto = FileDto.builder()
-                        .name(PathUtils.getFileNameFromPath(objectName))
-                        .size(item.size())
-                        .path(path == null ? "" : path)
-                        .type(item.isDir() ? FileDto.TYPE_DIRECTORY : FileDto.TYPE_FILE)
-                        .lastModified(formatDate(item))
-                        .build();
-
-                files.add(dto);
-
-            } catch (Exception e) {
-                log.error("Ошибка при чтении файла из MinIO", e);
-                throw new DirectoryReadException("Ошибка чтения списка файлов из хранилища", e);
-            }
-        }
-
-        return files;
-    }
-
-    public FileDto getFileInfo(Long userId, String path) {
-        String cleanPath = PathUtils.sanitize(path);
-
-        String objectName = PathUtils.buildUserPath(userId, cleanPath);
-
-        var stat = minioService.getMetadata(objectName);
-
-        boolean isDir = cleanPath.endsWith("/");
-
-        return FileDto.builder()
-                .name(PathUtils.getFileNameFromPath(cleanPath))
-                .path(cleanPath)
-                .size(stat.size())
-                .type(isDir ? FileDto.TYPE_DIRECTORY : FileDto.TYPE_FILE)
-                .lastModified(stat.lastModified().toString())
-                .build();
-    }
-
-    public InputStream downloadFile(Long userId, String path) {
-        String objectName = PathUtils.buildUserPath(userId, PathUtils.sanitize(path));
-        return minioService.getFile(objectName);
-    }
-
-    public void moveObject(Long userId, String fromPath, String toPath) {
-        String source = PathUtils.buildUserPath(userId, PathUtils.sanitize(fromPath));
-        String target = PathUtils.buildUserPath(userId, PathUtils.sanitize(toPath));
-
-        boolean isFolder = fromPath.endsWith("/");
-
-        if (isFolder) {
-            moveFolderRecursively(source, target);
-        } else {
-            minioService.copyObject(source, target);
-            minioService.removeObject(source);
-        }
-    }
-
-    public void deleteObject(Long userId, String path) {
-        String objectName = PathUtils.buildUserPath(userId, PathUtils.sanitize(path));
-        boolean isFolder = path.endsWith("/");
-
-        if (isFolder) {
-            deleteFolderRecursively(objectName);
-        } else {
-            minioService.removeObject(objectName);
-        }
-    }
-
     public List<FileDto> searchUserFiles(Long userId, String query) {
         String prefix = PathUtils.buildUserPath(userId, "");
         Iterable<Result<Item>> results = minioService.listObjectsRecursive(prefix);
@@ -195,48 +165,81 @@ public class FileService {
         return foundFiles;
     }
 
-    public Long calculateFolderSize(Long userId, String path) {
-        String prefix = PathUtils.buildUserPath(userId, PathUtils.sanitize(path));
-        prefix = PathUtils.ensureTrailingSlash(prefix);
+    public void deleteObject(Long userId, String path) {
+        String objectName = PathUtils.buildUserPath(userId, PathUtils.sanitize(path));
+        boolean isFolder = path.endsWith("/");
 
-        Iterable<Result<Item>> results = minioService.listObjectsRecursive(prefix);
-        long totalSize = 0L;
-
-        for (Result<Item> result : results) {
-            try {
-                Item item = result.get();
-                if (!item.isDir()) {
-                    totalSize += item.size();
-                }
-            } catch (Exception e) {
-                log.error("Ошибка при подсчете размера папки: {}", prefix, e);
-            }
+        if (isFolder) {
+            deleteFolderRecursively(objectName);
+        } else {
+            minioService.removeObject(objectName);
         }
-        return totalSize;
+    }
+
+    public void moveObject(Long userId, String fromPath, String toPath) {
+        String source = PathUtils.buildUserPath(userId, PathUtils.sanitize(fromPath));
+        String target = PathUtils.buildUserPath(userId, PathUtils.sanitize(toPath));
+
+        boolean isFolder = fromPath.endsWith("/");
+
+        if (isFolder) {
+            moveFolderRecursively(source, target);
+        } else {
+            minioService.copyObject(source, target);
+            minioService.removeObject(source);
+        }
+    }
+
+    private InputStream downloadFile(Long userId, String path) {
+        String objectName = PathUtils.buildUserPath(userId, PathUtils.sanitize(path));
+        return minioService.getFile(objectName);
     }
 
     private void moveFolderRecursively(String sourcePrefix, String targetPrefix) {
         String src = PathUtils.ensureTrailingSlash(sourcePrefix);
         String tgt = PathUtils.ensureTrailingSlash(targetPrefix);
-        boolean hasErrors = false;
 
         Iterable<Result<Item>> objects = minioService.listObjectsRecursive(src);
+        List<String> successfullyCopiedSources = new ArrayList<>();
+        List<String> successfullyCopiedTargets = new ArrayList<>();
 
         for (Result<Item> result : objects) {
             try {
-                Item item = result.get();
-                String oldKey = item.objectName();
+                String oldKey = result.get().objectName();
                 String newKey = oldKey.replaceFirst(src, tgt);
 
                 minioService.copyObject(oldKey, newKey);
+                successfullyCopiedSources.add(oldKey);
+                successfullyCopiedTargets.add(newKey);
+            } catch (Exception e) {
+                log.error("Сбой при копировании объекта, запускаем откат: {}", e.getMessage());
+                rollbackMovedFiles(successfullyCopiedTargets);
+                throw new StorageOperationException("Ошибка при перемещении папки. Изменения отменены.", e);
+            }
+        }
+
+        boolean hasErrors = false;
+        for (String oldKey : successfullyCopiedSources) {
+            try {
                 minioService.removeObject(oldKey);
             } catch (Exception e) {
-                log.error("Не удалось переместить объект: {}", e.getMessage());
+                log.error("Не удалось удалить оригинал после копирования: {}", e.getMessage());
                 hasErrors = true;
             }
         }
+
         if (hasErrors) {
-            throw new StorageOperationException("Папка удалена частично. Некоторые файлы не удалось удалить.");
+            throw new StorageOperationException("Папка скопирована, но некоторые старые файлы не удалось удалить.");
+        }
+    }
+
+    private void rollbackMovedFiles(List<String> targetKeys) {
+        for (String targetKey : targetKeys) {
+            try {
+                minioService.removeObject(targetKey);
+            } catch (Exception e) {
+                log.error("КРИТИЧЕСКАЯ ОШИБКА ОТКАТА! Не удалось удалить файл: {}", targetKey, e);
+            }
         }
     }
 
@@ -256,6 +259,26 @@ public class FileService {
         if (hasErrors) {
             throw new StorageOperationException("Папка удалена частично. Некоторые файлы не удалось удалить.");
         }
+    }
+
+    private Long calculateFolderSize(Long userId, String path) {
+        String prefix = PathUtils.buildUserPath(userId, PathUtils.sanitize(path));
+        prefix = PathUtils.ensureTrailingSlash(prefix);
+
+        Iterable<Result<Item>> results = minioService.listObjectsRecursive(prefix);
+        long totalSize = 0L;
+
+        for (Result<Item> result : results) {
+            try {
+                Item item = result.get();
+                if (!item.isDir()) {
+                    totalSize += item.size();
+                }
+            } catch (Exception e) {
+                log.error("Ошибка при подсчете размера папки: {}", prefix, e);
+            }
+        }
+        return totalSize;
     }
 
     private String formatDate(Item item) {
