@@ -81,10 +81,14 @@ public class FileController {
     }
 
     @GetMapping("/download/status")
-    public ResponseEntity<Map<String, String>> checkDownloadStatus(@RequestParam("ticket") String ticket) {
-        Map<String, String> result = archiveService.getArchiveStatus(ticket);
-        String currentStatus = result.get(ArchiveStatus.STATUS_KEY);
+    public ResponseEntity<Map<String, String>> checkDownloadStatus(
+            @RequestParam("ticket") String ticket,
+            @AuthenticationPrincipal CustomUserDetails user // ДОБАВИЛИ ЮЗЕРА!
+    ) {
+        // Передаем userId в сервис
+        Map<String, String> result = archiveService.getArchiveStatus(ticket, user.getId());
 
+        String currentStatus = result.get(ArchiveStatus.STATUS_KEY);
         if (ArchiveStatus.READY.name().equals(currentStatus) ||
                 ArchiveStatus.ERROR.name().equals(currentStatus)) {
             return ResponseEntity.ok(result);

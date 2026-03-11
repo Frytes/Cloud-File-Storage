@@ -2,6 +2,7 @@ package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.TestcontainersConfiguration;
 import com.frytes.cloudstorage.files.dto.FileDto;
+import com.frytes.cloudstorage.files.dto.FileType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -38,7 +39,7 @@ class FileServiceIntegrationTest {
 
         assertThat(savedFile.name()).isEqualTo("report.txt");
         assertThat(savedFile.path()).isEqualTo("documents/work/report.txt");
-        assertThat(savedFile.type()).isEqualTo(FileDto.TYPE_FILE);
+        assertThat(savedFile.type()).isEqualTo(FileType.FILE);
         assertThat(savedFile.size()).isGreaterThan(0L);
     }
 }

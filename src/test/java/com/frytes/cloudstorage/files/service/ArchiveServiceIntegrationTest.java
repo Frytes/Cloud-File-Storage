@@ -51,7 +51,7 @@ class ArchiveServiceIntegrationTest {
 
         String ticketId = archiveService.sendArchivingTask(userId, userName, path, size);
 
-        Map<String, String> status = archiveService.getArchiveStatus(ticketId);
+        Map<String, String> status = archiveService.getArchiveStatus(ticketId, userId);
 
         assertThat(status).isNotNull();
         assertThat(status).containsEntry(ArchiveStatus.STATUS_KEY, ArchiveStatus.IN_PROGRESS.name());

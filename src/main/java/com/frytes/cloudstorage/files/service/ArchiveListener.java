@@ -10,6 +10,7 @@ import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
@@ -19,8 +20,8 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import org.springframework.core.task.TaskExecutor;
 import java.util.concurrent.TimeoutException;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
@@ -34,80 +35,68 @@ public class ArchiveListener {
     private final MinioService minioService;
     private final StringRedisTemplate redisTemplate;
     private final SimpMessagingTemplate messagingTemplate;
-    private final Executor taskExecutor;
+    private final TaskExecutor applicationTaskExecutor;
 
     private static final int PIPE_BUFFER_SIZE = 5 * 1024 * 1024;
     private static final int TIMEOUT = 10;
 
+    @Value("${app.archive.expiration-hours:24}")
+    private long expirationHours;
+
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void listen(ArchiveTask task) {
-        log.info("📦 [Ticket: {}] Начало архивации. Путь: {}, Размер: ~{} MB",
-                task.ticketId(), task.path(), task.totalSize() / 1024 / 1024);
+        log.info("📦 [Ticket: {}] Начало архивации", task.ticketId());
 
         String redisKey = "archive:status:" + task.ticketId();
-        redisTemplate.expire(redisKey, 24, TimeUnit.HOURS);
+        redisTemplate.expire(redisKey, expirationHours, TimeUnit.HOURS);
 
-        String archiveName = "archive-" + task.ticketId() + ".zip";
-        String sourcePrefix = PathUtils.buildUserPath(task.userId(), PathUtils.sanitize(task.path()));
-        String finalSourcePrefix = PathUtils.ensureTrailingSlash(sourcePrefix);
+        String archiveName = "user-" + task.userId() + "-files/archive-" + task.ticketId() + ".zip";
 
-
+        String sourcePrefix = PathUtils.ensureTrailingSlash(
+                PathUtils.buildUserPath(task.userId(), PathUtils.sanitize(task.path()))
+        );
 
         try (PipedInputStream pipedIn = new PipedInputStream(PIPE_BUFFER_SIZE);
              PipedOutputStream pipedOut = new PipedOutputStream(pipedIn)) {
 
             CompletableFuture<Void> zipFuture = CompletableFuture.runAsync(() -> {
                 try (ZipOutputStream zipOut = new ZipOutputStream(pipedOut)) {
-
                     zipOut.setLevel(Deflater.NO_COMPRESSION);
-
-                    Iterable<Result<Item>> results = minioService.listObjectsRecursive(finalSourcePrefix);
-                    long startTime = System.currentTimeMillis();
+                    Iterable<Result<Item>> results = minioService.listObjectsRecursive(sourcePrefix);
 
                     for (Result<Item> result : results) {
                         Item item = result.get();
-                        if (item.isDir()) {
-                            continue;
-                        }
+                        if (item.isDir()) continue;
 
                         String objectName = item.objectName();
-                        String entryName = objectName.substring(finalSourcePrefix.length());
+                        String entryName = objectName.substring(sourcePrefix.length());
 
-                        ZipEntry zipEntry = new ZipEntry(entryName);
-                        zipOut.putNextEntry(zipEntry);
-
+                        zipOut.putNextEntry(new ZipEntry(entryName));
                         try (InputStream fileStream = minioService.getFile(objectName)) {
                             fileStream.transferTo(zipOut);
                         }
                         zipOut.closeEntry();
                     }
-
-                    long duration = (System.currentTimeMillis() - startTime) / 1000;
-                    log.info("🏁 [Ticket: {}] Упаковка завершена за {} сек.", task.ticketId(), duration);
-
                 } catch (Exception e) {
                     throw new ArchiveCreationException("Failed to zip", e);
-                } finally {
-                    closePipedOutQuietly(pipedOut, task.ticketId());
                 }
-            }, taskExecutor);
+            }, applicationTaskExecutor);
 
             minioService.uploadArchive(archiveName, pipedIn);
-
             zipFuture.get(TIMEOUT, TimeUnit.MINUTES);
 
-            log.info("✅ [Ticket: {}] Архив успешно загружен в MinIO: {}", task.ticketId(), archiveName);
-            redisTemplate.opsForValue().set(redisKey, ArchiveStatus.READY.name(), 24, TimeUnit.HOURS);
+            log.info("✅ [Ticket: {}] Архив успешно загружен", task.ticketId());
+            redisTemplate.opsForValue().set(redisKey, ArchiveStatus.READY.name(), expirationHours, TimeUnit.HOURS);
 
             String downloadUrl = minioService.getPresignedUrl(archiveName);
-            sendWebSocketMessage(task, ArchiveStatus.READY.name(), "url", downloadUrl);
+            sendWebSocketMessage(task, ArchiveStatus.READY.name(), "downloadUrl", downloadUrl);
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("❌ [Ticket: {}] Архивация прервана потоком", task.ticketId(), e);
+            log.error("❌ [Ticket: {}] Архивация прервана", task.ticketId(), e);
             handleError(task, redisKey);
         } catch (TimeoutException e) {
-            log.error("❌ [Ticket: {}] Превышено время ожидания архивации", task.ticketId(), e);
+            log.error("❌ [Ticket: {}] Превышено время ожидания", task.ticketId(), e);
             handleError(task, redisKey);
         } catch (Exception e) {
             log.error("❌ [Ticket: {}] Ошибка при архивации", task.ticketId(), e);
@@ -115,15 +104,6 @@ public class ArchiveListener {
         }
     }
 
-    private void closePipedOutQuietly(PipedOutputStream pipedOut, String ticketId) {
-        try {
-            if (pipedOut != null) {
-                pipedOut.close();
-            }
-        } catch (Exception e) {
-            log.warn("Не удалось корректно закрыть поток pipedOut для тикета {}", ticketId, e);
-        }
-    }
 
     private void handleError(ArchiveTask task, String redisKey) {
         redisTemplate.opsForValue().set(redisKey, ArchiveStatus.ERROR.name(), 24, TimeUnit.HOURS);

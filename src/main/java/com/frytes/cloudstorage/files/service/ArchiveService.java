@@ -59,13 +59,14 @@ public class ArchiveService {
         return ticketId;
     }
 
-    public Map<String, String> getArchiveStatus(String ticket) {
+    public Map<String, String> getArchiveStatus(String ticket, Long userId) {
         String redisKey = "archive:status:" + ticket;
-        String statusStr  = redisTemplate.opsForValue().get(redisKey);
+        String statusStr = redisTemplate.opsForValue().get(redisKey);
 
-        if (statusStr  == null) {
+        if (statusStr == null) {
             throw new ResourceNotFoundException("Тикет не найден или истек");
         }
+
         ArchiveStatus status;
         try {
             status = ArchiveStatus.valueOf(statusStr);
@@ -74,10 +75,11 @@ public class ArchiveService {
         }
 
         if (status == ArchiveStatus.READY) {
-            String archiveName = "archive-" + ticket + ".zip";
+            String archiveName = "user-" + userId + "-files/archive-" + ticket + ".zip";
             String url = minioService.getPresignedUrl(archiveName);
             return status.toResponse(url, expirationHours * 3600);
         }
+
         return status.toResponse(null, null);
     }
 
