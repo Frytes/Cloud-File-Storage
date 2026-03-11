@@ -25,7 +25,7 @@ class CloudStorageE2ETest {
         Configuration.browserCapabilities = options;
 
         Configuration.headless = true;
-        Configuration.baseUrl = "http://192.168.0.14";
+        Configuration.baseUrl = "http://localhost";
         Configuration.browserSize = "1920x1080";
         Configuration.timeout = 10000;
     }

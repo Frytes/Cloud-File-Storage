@@ -56,7 +56,6 @@ public class ArchiveListener {
                     zipOut.setLevel(Deflater.NO_COMPRESSION);
 
                     Iterable<Result<Item>> results = minioService.listObjectsRecursive(finalSourcePrefix);
-
                     long startTime = System.currentTimeMillis();
 
                     for (Result<Item> result : results) {
@@ -80,6 +79,12 @@ public class ArchiveListener {
 
                 } catch (Exception e) {
                     throw new ArchiveCreationException("Failed to zip", e);
+                } finally {
+                    try {
+                        pipedOut.close();
+                    } catch (Exception ignored) {
+                        // Игнорируем ошибку закрытия
+                    }
                 }
             });
 

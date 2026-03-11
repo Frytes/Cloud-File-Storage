@@ -65,6 +65,7 @@ class AuthServiceTest {
         when(userMapper.toEntity(request)).thenReturn(userEntity);
         when(passwordEncoder.encode(request.password())).thenReturn("encodedPass");
         when(authenticationManager.authenticate(any())).thenReturn(authentication);
+        when(httpRequest.getSession(false)).thenReturn(null);
         when(httpRequest.getSession(true)).thenReturn(httpSession);
         when(authentication.getName()).thenReturn("newuser");
         doReturn(List.of(new SimpleGrantedAuthority("ROLE_USER"))).when(authentication).getAuthorities();
@@ -102,6 +103,7 @@ class AuthServiceTest {
         when(authenticationManager.authenticate(any())).thenReturn(authentication);
         when(httpRequest.getSession(true)).thenReturn(httpSession);
         when(authentication.getName()).thenReturn("user");
+        when(httpRequest.getSession(false)).thenReturn(null);
         doReturn(List.of(new SimpleGrantedAuthority("ROLE_USER"))).when(authentication).getAuthorities();
 
         AuthResponse response = authService.login(request, httpRequest);
