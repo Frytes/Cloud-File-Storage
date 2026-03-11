@@ -219,7 +219,7 @@ public class FileService {
         for (Result<Item> result : objects) {
             try {
                 String oldKey = result.get().objectName();
-                String newKey = oldKey.replaceFirst(src, tgt);
+                String newKey = PathUtils.replacePrefix(oldKey, src, tgt);
 
                 minioService.copyObject(oldKey, newKey);
                 successfullyCopiedSources.add(oldKey);

@@ -32,6 +32,9 @@ public class MinioService {
     @Value("${minio.buckets.temp-archives}")
     private String tempArchivesBucket;
 
+    @Value("${app.archive.expiration-hours:24}")
+    private int expirationHours;
+
     public MinioService(MinioClient minioClient,
                         @Qualifier("signerMinioClient") MinioClient signerMinioClient) {
         this.minioClient = minioClient;
@@ -52,7 +55,7 @@ public class MinioService {
                             .method(Method.GET)
                             .bucket(tempArchivesBucket)
                             .object(objectName)
-                            .expiry(1, TimeUnit.HOURS)
+                            .expiry(expirationHours, TimeUnit.HOURS)
                             .build()
             );
         } catch (Exception e) {

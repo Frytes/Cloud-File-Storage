@@ -7,6 +7,7 @@ import com.frytes.cloudstorage.files.dto.ArchiveTask;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,9 @@ public class ArchiveService {
     private final RabbitTemplate rabbitTemplate;
     private final StringRedisTemplate redisTemplate;
     private final MinioService minioService;
+
+    @Value("${app.archive.expiration-hours:24}")
+    private long expirationHours;
 
     public String sendArchivingTask(Long userId, String username, String path, Long totalSize) {
         String ticketId = UUID.randomUUID().toString();
@@ -61,11 +65,11 @@ public class ArchiveService {
             status = ArchiveStatus.ERROR;
         }
 
-        String url = null;
         if (status == ArchiveStatus.READY) {
             String archiveName = "archive-" + ticket + ".zip";
-            url = minioService.getPresignedUrl(archiveName);
+            String url = minioService.getPresignedUrl(archiveName);
+            return status.toResponse(url, expirationHours * 3600);
         }
-        return status.toResponse(url);
+        return status.toResponse(null, null);
     }
 }

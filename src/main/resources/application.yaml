@@ -5,8 +5,7 @@ spring:
     open-in-view: false
   application:
     name: CloudStorage
-  tomcat:
-    max-parameters: 10000
+
   security:
     oauth2:
       client:
@@ -17,11 +16,6 @@ spring:
             scope:
               - email
               - profile
-
-  servlet:
-    multipart:
-      max-file-size: 5GB
-      max-request-size: 5GB
 
   datasource:
     url: jdbc:postgresql://localhost:5432/cloud_storage
@@ -62,6 +56,25 @@ spring:
     username: ${RABBITMQ_USER:guest}
     password: ${RABBITMQ_PASSWORD:guest}
 
+  tomcat:
+    max-parameters: 10000          # Максимальное количество параметров в HTTP запросе.
+
+  servlet:
+    multipart:
+      max-file-size: 5GB           # Максимальный размер одного загружаемого файла.
+      max-request-size: 5GB        # Максимальный размер всего multipart запроса
+
+app:
+  frontend:
+    url: ${FRONTEND_URL:http://localhost/files}
+  search:
+    limit: 50                      # Максимальное количество результатов поиска.
+  upload:
+    max-files-per-request: 10000  # Максимальное количество файлов в одном запросе на загрузку
+  archive:
+    expiration-hours: 24          # Время жизни архива и ссылки по ТЗ
+
+
 minio:
   url: ${MINIO_URL:http://localhost:9000}
   external-url: ${MINIO_EXTERNAL_URL:http://localhost:9000}
@@ -70,11 +83,3 @@ minio:
   buckets:
     user-files: user-files
     temp-archives: temp-archives
-
-app:
-  frontend:
-    url: ${FRONTEND_URL:http://localhost/files}
-  search:
-    limit: 50
-  upload:
-    max-files-per-request: 10000

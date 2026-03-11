@@ -5,6 +5,7 @@ import com.frytes.cloudstorage.users.dto.LoginRequest;
 import com.frytes.cloudstorage.users.dto.RegisterRequest;
 import com.frytes.cloudstorage.users.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -27,18 +28,22 @@ public class AuthController {
 
     private final AuthService authService;
     private final AuthenticationManager authenticationManager;
+    private final SecurityContextRepository securityContextRepository;
 
     @PostMapping("/sign-up")
     @ResponseStatus(HttpStatus.CREATED)
-    public AuthResponse register(@RequestBody @Valid RegisterRequest request, HttpServletRequest httpRequest) {
+    public AuthResponse register(@RequestBody @Valid RegisterRequest request,
+                                 HttpServletRequest httpRequest,
+                                 HttpServletResponse httpResponse) {
         authService.register(request);
-
-        return performLogin(request.username(), request.password(), httpRequest);
+        return performLogin(request.username(), request.password(), httpRequest, httpResponse);
     }
 
     @PostMapping("/sign-in")
-    public AuthResponse login(@RequestBody @Valid LoginRequest request, HttpServletRequest httpRequest) {
-        return performLogin(request.username(), request.password(), httpRequest);
+    public AuthResponse login(@RequestBody @Valid LoginRequest request,
+                              HttpServletRequest httpRequest,
+                              HttpServletResponse httpResponse) {
+        return performLogin(request.username(), request.password(), httpRequest, httpResponse);
     }
 
     @PostMapping("/sign-out")
@@ -52,7 +57,9 @@ public class AuthController {
         log.info("Пользователь успешно вышел из системы");
     }
 
-    private AuthResponse performLogin(String username, String password, HttpServletRequest httpRequest) {
+    private AuthResponse performLogin(String username, String password,
+                                      HttpServletRequest httpRequest,
+                                      HttpServletResponse httpResponse) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(username, password)
         );
@@ -61,13 +68,7 @@ public class AuthController {
         securityContext.setAuthentication(authentication);
         SecurityContextHolder.setContext(securityContext);
 
-        HttpSession oldSession = httpRequest.getSession(false);
-        if (oldSession != null) {
-            oldSession.invalidate();
-        }
-
-        HttpSession newSession = httpRequest.getSession(true);
-        newSession.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, securityContext);
+        securityContextRepository.saveContext(securityContext, httpRequest, httpResponse);
 
         log.info("Пользователь {} успешно вошел в систему", authentication.getName());
 

@@ -17,7 +17,7 @@ public class PathUtils {
 
         return path.trim()
                 .replaceAll("/+", "/")
-                .replaceAll("(^/)|(/$)", "");
+                .replaceAll("^/", "");
     }
 
     public static String ensureTrailingSlash(String path) {
@@ -25,6 +25,12 @@ public class PathUtils {
             return path + "/";
         }
         return path;
+    }
+    public static String replacePrefix(String fullPath, String oldPrefix, String newPrefix) {
+        return fullPath.replaceFirst(
+                java.util.regex.Pattern.quote(oldPrefix),
+                java.util.regex.Matcher.quoteReplacement(newPrefix)
+        );
     }
 
     public static String buildUserPath(Long userId, String path) {
