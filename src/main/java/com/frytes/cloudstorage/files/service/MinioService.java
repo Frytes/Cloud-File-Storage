@@ -176,6 +176,26 @@ public class MinioService {
         }
     }
 
+    public boolean isObjectExist(String objectName) {
+        try {
+            minioClient.statObject(
+                    StatObjectArgs.builder()
+                            .bucket(userFilesBucket)
+                            .object(objectName)
+                            .build()
+            );
+            return true;
+        } catch (io.minio.errors.ErrorResponseException e) {
+            if ("NoSuchKey".equals(e.errorResponse().code())) {
+                return false;
+            }
+            throw new StorageOperationException("Ошибка при проверке объекта", e);
+        } catch (Exception e) {
+            throw new StorageOperationException("Ошибка при проверке объекта", e);
+        }
+    }
+
+
     private void configureLifecyclePolicy(String bucketName) {
         try {
             LifecycleRule rule = new LifecycleRule(

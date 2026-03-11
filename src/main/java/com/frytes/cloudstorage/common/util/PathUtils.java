@@ -1,5 +1,6 @@
 package com.frytes.cloudstorage.common.util;
 
+import com.frytes.cloudstorage.common.exception.InvalidPathException;
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
@@ -11,7 +12,7 @@ public class PathUtils {
         }
 
         if (path.contains("..")) {
-            throw new IllegalArgumentException("Недопустимый путь: обнаружена попытка выхода за пределы директории");
+            throw new InvalidPathException("Недопустимый путь: обнаружена попытка выхода за пределы директории");
         }
 
         return path.trim()

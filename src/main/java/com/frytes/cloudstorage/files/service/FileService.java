@@ -1,8 +1,6 @@
 package com.frytes.cloudstorage.files.service;
 
-import com.frytes.cloudstorage.common.exception.DirectoryReadException;
-import com.frytes.cloudstorage.common.exception.FileUploadException;
-import com.frytes.cloudstorage.common.exception.StorageOperationException;
+import com.frytes.cloudstorage.common.exception.*;
 import com.frytes.cloudstorage.common.util.PathUtils;
 import com.frytes.cloudstorage.files.dto.DownloadResponse;
 import com.frytes.cloudstorage.files.dto.FileDto;
@@ -66,8 +64,13 @@ public class FileService {
     }
 
     public FileDto createDirectory(Long userId, String path) {
+        validateNotRoot(path, "Создание папки");
         String processedPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
         String objectName = PathUtils.buildUserPath(userId, processedPath);
+
+        if (minioService.isObjectExist(objectName)) {
+            throw new ResourceAlreadyExistsException("Папка с таким именем уже существует");
+        }
 
         minioService.createDirectory(objectName);
 
@@ -108,6 +111,10 @@ public class FileService {
 
             String fullPath = directoryPath + file.getOriginalFilename();
             String objectName = PathUtils.buildUserPath(userId, fullPath);
+
+            if (minioService.isObjectExist(objectName)) {
+                throw new ResourceAlreadyExistsException("Файл " + file.getOriginalFilename() + " уже существует");
+            }
 
             try {
                 minioService.upload(objectName, file.getInputStream(), file.getContentType());
@@ -166,6 +173,7 @@ public class FileService {
     }
 
     public void deleteObject(Long userId, String path) {
+        validateNotRoot(path, "Удаление");
         String objectName = PathUtils.buildUserPath(userId, PathUtils.sanitize(path));
         boolean isFolder = path.endsWith("/");
 
@@ -177,8 +185,13 @@ public class FileService {
     }
 
     public void moveObject(Long userId, String fromPath, String toPath) {
+        validateNotRoot(fromPath, "Перемещение (источник)");
         String source = PathUtils.buildUserPath(userId, PathUtils.sanitize(fromPath));
         String target = PathUtils.buildUserPath(userId, PathUtils.sanitize(toPath));
+
+        if (minioService.isObjectExist(target)) {
+            throw new ResourceAlreadyExistsException("Ресурс по целевому пути уже существует");
+        }
 
         boolean isFolder = fromPath.endsWith("/");
 
@@ -279,6 +292,13 @@ public class FileService {
             }
         }
         return totalSize;
+    }
+
+    private void validateNotRoot(String path, String operation) {
+        String clean = PathUtils.sanitize(path);
+        if (clean.isEmpty() || clean.equals("/")) {
+            throw new InvalidPathException("Операция '" + operation + "' недопустима для корневой директории");
+        }
     }
 
     private String formatDate(Item item) {

@@ -35,6 +35,7 @@ public class ArchiveListener {
     private final SimpMessagingTemplate messagingTemplate;
 
     private static final int PIPE_BUFFER_SIZE = 5 * 1024 * 1024;
+    private static final int TIMEOUT = 10;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void listen(ArchiveTask task) {
@@ -91,7 +92,7 @@ public class ArchiveListener {
 
             minioService.uploadArchive(archiveName, pipedIn);
 
-            zipFuture.get(10, TimeUnit.MINUTES);
+            zipFuture.get(TIMEOUT, TimeUnit.MINUTES);
 
             log.info("✅ [Ticket: {}] Архив успешно загружен в MinIO: {}", task.ticketId(), archiveName);
             redisTemplate.opsForValue().set(redisKey, ArchiveStatus.READY.name(), 24, TimeUnit.HOURS);
