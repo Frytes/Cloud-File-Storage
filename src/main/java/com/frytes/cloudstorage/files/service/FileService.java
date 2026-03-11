@@ -218,6 +218,7 @@ public class FileService {
     private void moveFolderRecursively(String sourcePrefix, String targetPrefix) {
         String src = PathUtils.ensureTrailingSlash(sourcePrefix);
         String tgt = PathUtils.ensureTrailingSlash(targetPrefix);
+        boolean hasErrors = false;
 
         Iterable<Result<Item>> objects = minioService.listObjectsRecursive(src);
 
@@ -230,19 +231,30 @@ public class FileService {
                 minioService.copyObject(oldKey, newKey);
                 minioService.removeObject(oldKey);
             } catch (Exception e) {
-                throw new StorageOperationException("Ошибка при перемещении папки", e);
+                log.error("Не удалось переместить объект: {}", e.getMessage());
+                hasErrors = true;
             }
+        }
+        if (hasErrors) {
+            throw new StorageOperationException("Папка удалена частично. Некоторые файлы не удалось удалить.");
         }
     }
 
     private void deleteFolderRecursively(String prefix) {
         Iterable<Result<Item>> objects = minioService.listObjectsRecursive(prefix);
+        boolean hasErrors = false;
+
         for (Result<Item> result : objects) {
             try {
                 minioService.removeObject(result.get().objectName());
             } catch (Exception e) {
-                throw new StorageOperationException("Ошибка при удалении содержимого папки", e);
+                log.error("Не удалось удалить объект: {}", e.getMessage());
+                hasErrors = true;
             }
+        }
+
+        if (hasErrors) {
+            throw new StorageOperationException("Папка удалена частично. Некоторые файлы не удалось удалить.");
         }
     }
 

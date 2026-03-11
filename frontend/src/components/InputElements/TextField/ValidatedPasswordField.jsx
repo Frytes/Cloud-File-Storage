@@ -36,7 +36,6 @@ export default function ValidatedPasswordField({
             setPasswordError(errMessage);
         }
         setPassword(value);
-        localStorage.setItem('password', value);
 
     }
 

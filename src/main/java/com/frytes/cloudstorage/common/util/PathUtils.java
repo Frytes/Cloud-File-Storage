@@ -9,6 +9,11 @@ public class PathUtils {
         if (path == null || path.isBlank()) {
             return "";
         }
+
+        if (path.contains("..")) {
+            throw new IllegalArgumentException("Недопустимый путь: обнаружена попытка выхода за пределы директории");
+        }
+
         return path.trim()
                 .replaceAll("/+", "/")
                 .replaceAll("(^/)|(/$)", "");

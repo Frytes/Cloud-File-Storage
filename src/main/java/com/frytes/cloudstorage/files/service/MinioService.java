@@ -7,7 +7,6 @@ import io.minio.*;
 import io.minio.http.Method;
 import io.minio.messages.*;
 import jakarta.annotation.PostConstruct;
-// import lombok.RequiredArgsConstructor; // Убираем, так как нужен конструктор с @Qualifier
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +24,8 @@ public class MinioService {
     private final MinioClient minioClient;
     private final MinioClient signerMinioClient;
 
+    public static final int STREAM_PART_SIZE = 10 * 1024 * 1024
+            ;
     @Value("${minio.buckets.user-files}")
     private String userFilesBucket;
 
@@ -79,7 +80,7 @@ public class MinioService {
                     PutObjectArgs.builder()
                             .bucket(userFilesBucket)
                             .object(objectName)
-                            .stream(inputStream, -1, 10485760)
+                            .stream(inputStream, -1, STREAM_PART_SIZE)
                             .contentType(contentType)
                             .build()
             );
@@ -94,7 +95,7 @@ public class MinioService {
                     PutObjectArgs.builder()
                             .bucket(tempArchivesBucket)
                             .object(objectName)
-                            .stream(inputStream, -1, 10485760)
+                            .stream(inputStream, -1, STREAM_PART_SIZE)
                             .contentType("application/zip")
                             .build()
             );

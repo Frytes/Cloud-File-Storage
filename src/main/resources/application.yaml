@@ -1,6 +1,8 @@
 server:
   forward-headers-strategy: framework
 spring:
+  jpa:
+    open-in-view: false
   application:
     name: CloudStorage
   tomcat:
