@@ -1,7 +1,7 @@
 package com.frytes.cloudstorage.files.controller;
 
-import com.frytes.cloudstorage.common.util.PathUtils;
 import com.frytes.cloudstorage.files.dto.ArchiveStatus;
+import com.frytes.cloudstorage.files.dto.DownloadResponse;
 import com.frytes.cloudstorage.files.dto.FileDto;
 import com.frytes.cloudstorage.files.service.ArchiveService;
 import com.frytes.cloudstorage.files.service.FileService;
@@ -57,25 +57,22 @@ public class FileController {
             @RequestParam("path") String path,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        if (path.endsWith("/")) {
-            Long totalSize = fileService.calculateFolderSize(user.getId(), path);
-            String ticket = archiveService.sendArchivingTask(user.getId(), user.getUsername(), path, totalSize);
+        DownloadResponse response = fileService.processDownload(user.getId(), user.getUsername(), path);
 
+        if (response.isAsync()) {
             return ResponseEntity.accepted().body(Map.of(
-                    "ticket", ticket,
+                    "ticket", response.ticket(),
                     "message", "Начата архивация папки",
                     ArchiveStatus.STATUS_KEY, ArchiveStatus.IN_PROGRESS.name()
             ));
         }
 
-        var inputStream = fileService.downloadFile(user.getId(), path);
-        String fileName = PathUtils.getFileNameFromPath(path);
-        String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
+        String encodedFileName = URLEncoder.encode(response.fileName(), StandardCharsets.UTF_8).replace("+", "%20");
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFileName + "\"")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(new InputStreamResource(inputStream));
+                .body(new InputStreamResource(response.stream()));
     }
 
     @GetMapping("/download/status")

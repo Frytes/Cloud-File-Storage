@@ -4,6 +4,7 @@ import com.frytes.cloudstorage.common.exception.DirectoryReadException;
 import com.frytes.cloudstorage.common.exception.FileUploadException;
 import com.frytes.cloudstorage.common.exception.StorageOperationException;
 import com.frytes.cloudstorage.common.util.PathUtils;
+import com.frytes.cloudstorage.files.dto.DownloadResponse;
 import com.frytes.cloudstorage.files.dto.FileDto;
 import io.minio.Result;
 import io.minio.messages.Item;
@@ -23,6 +24,7 @@ import java.util.List;
 public class FileService {
 
     private final MinioService minioService;
+    private final ArchiveService archiveService;
 
     public FileDto createDirectory(Long userId, String path) {
         String processedPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
@@ -59,6 +61,19 @@ public class FileService {
         }
     }
 
+    public DownloadResponse processDownload(Long userId, String username, String path) {
+        boolean isFolder = path.endsWith("/");
+
+        if (isFolder) {
+            Long totalSize = calculateFolderSize(userId, path);
+            String ticket = archiveService.sendArchivingTask(userId, username, path, totalSize);
+            return new DownloadResponse(true, ticket, null, null);
+        } else {
+            InputStream inputStream = downloadFile(userId, path);
+            String fileName = PathUtils.getFileNameFromPath(path);
+            return new DownloadResponse(false, null, inputStream, fileName);
+        }
+    }
 
     public List<FileDto> getAllDirectory(Long userId, String path) {
         String processedPath = PathUtils.ensureTrailingSlash(PathUtils.sanitize(path));
