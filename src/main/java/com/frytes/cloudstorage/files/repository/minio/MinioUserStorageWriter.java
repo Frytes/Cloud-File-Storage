@@ -36,7 +36,8 @@ public class MinioUserStorageWriter implements UserStorageWriter {
                             .build()
             );
         } catch (Exception e) {
-            throw new DirectoryCreationException("Ошибка при создании папки: " + e.getMessage(), e);
+            log.error("Failed to create directory in MinIO. Path: {}", path, e);
+            throw new DirectoryCreationException("Ошибка при создании папки", e);
         }
     }
 
@@ -52,7 +53,8 @@ public class MinioUserStorageWriter implements UserStorageWriter {
                             .build()
             );
         } catch (Exception e) {
-            throw new FileUploadException("Ошибка загрузки файла в MinIO: " + e.getMessage(), e);
+            log.error("Failed to upload file to MinIO. Path: {}", path, e);
+            throw new FileUploadException("Ошибка загрузки файла", e);
         }
     }
 
@@ -66,7 +68,8 @@ public class MinioUserStorageWriter implements UserStorageWriter {
                             .build()
             );
         } catch (Exception e) {
-            throw new StorageOperationException("Ошибка при удалении файла: " + e.getMessage(), e);
+            log.error("Failed to remove object from MinIO. Path: {}", path, e);
+            throw new StorageOperationException("Ошибка при удалении файла", e);
         }
     }
 
@@ -86,9 +89,10 @@ public class MinioUserStorageWriter implements UserStorageWriter {
 
             for (Result<DeleteError> result : results) {
                 DeleteError error = result.get();
-                log.error("Ошибка пакетного удаления объекта {}: {}", error.objectName(), error.message());
+                log.error("Failed to delete object in batch. Object: {}, Error: {}", error.objectName(), error.message());
             }
         } catch (Exception e) {
+            log.error("Failed to execute batch remove in MinIO.", e);
             throw new StorageOperationException("Ошибка при массовом удалении файлов", e);
         }
     }
@@ -104,7 +108,8 @@ public class MinioUserStorageWriter implements UserStorageWriter {
                             .build()
             );
         } catch (Exception e) {
-            throw new StorageOperationException("Ошибка копирования файла: " + source, e);
+            log.error("Failed to copy object in MinIO. Source: {}, Target: {}", source, target, e);
+            throw new StorageOperationException("Ошибка копирования файла", e);
         }
     }
 }

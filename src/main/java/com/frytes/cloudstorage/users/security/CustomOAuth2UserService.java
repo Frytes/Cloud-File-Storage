@@ -39,7 +39,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 user.setProvider(Provider.GOOGLE);
                 userRepository.save(user);
             }
-            log.info("Существующий пользователь вошел через Google: {}", username);
+            log.info("Existing user logged in via Google: {}", username);
         } else {
             user = User.builder()
                     .username(username)
@@ -48,7 +48,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     .role(Role.USER)
                     .build();
             user = userRepository.save(user);
-            log.info("Зарегистрирован новый пользователь через Google: {}", username);
+            log.info("New user registered via Google: {}", username);
         }
 
         return new CustomUserDetails(

@@ -49,12 +49,14 @@ public class AuthController {
     @PostMapping("/sign-out")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(HttpServletRequest httpRequest) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth != null ? auth.getName() : "anonymous";
         HttpSession session = httpRequest.getSession(false);
         if (session != null) {
             session.invalidate();
         }
         SecurityContextHolder.clearContext();
-        log.info("Пользователь успешно вышел из системы");
+        log.info("User '{}' successfully logged out", username);
     }
 
     private AuthResponse performLogin(String username, String password,
@@ -70,7 +72,7 @@ public class AuthController {
 
         securityContextRepository.saveContext(securityContext, httpRequest, httpResponse);
 
-        log.info("Пользователь {} успешно вошел в систему", authentication.getName());
+        log.info("User '{}' successfully logged in", authentication.getName());
 
         String role = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)

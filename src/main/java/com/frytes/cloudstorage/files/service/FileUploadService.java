@@ -28,7 +28,7 @@ public class FileUploadService {
             String originalFilename = file.getOriginalFilename();
 
             if (file.isEmpty() || originalFilename == null || originalFilename.isBlank()) {
-                log.warn("Попытка загрузки пустого файла или файла без имени. Пропускаем.");
+                log.warn("Upload skipped: Empty file or blank filename for user {}", userId);
                 continue;
             }
 
@@ -36,13 +36,14 @@ public class FileUploadService {
             String objectName = PathUtils.buildUserPath(userId, fullPath);
 
             if (userStorageReader.isObjectExist(objectName)) {
+                log.warn("Upload failed: File '{}' already exists for user {}", originalFilename, userId);
                 throw new ResourceAlreadyExistsException("Файл " + originalFilename + " уже существует");
             }
 
             try (InputStream is = file.getInputStream()) {
                 userStorageWriter.uploadFile(objectName, is, file.getContentType());
             } catch (Exception e) {
-                log.error("Ошибка при загрузке файла: {}", originalFilename, e);
+                log.error("Upload failed for file: {}", originalFilename, e);
                 throw new FileUploadException("Не удалось сохранить файл " + originalFilename, e);
             }
         }

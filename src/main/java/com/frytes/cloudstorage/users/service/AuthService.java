@@ -25,6 +25,7 @@ public class AuthService {
     @Transactional
     public void register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.username())) {
+            log.warn("Registration failed: Username '{}' already exists", request.username());
             throw new UserAlreadyExistsException("Пользователь с таким именем уже существует");
         }
 
@@ -34,6 +35,6 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.password()));
 
         userRepository.save(user);
-        log.info("Зарегистрирован новый пользователь: {}", user.getUsername());
+        log.info("Successfully registered new user: {}", user.getUsername());
     }
 }

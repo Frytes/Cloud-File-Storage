@@ -72,6 +72,7 @@ public class ArchiveService {
         String statusStr = redisTemplate.opsForValue().get(redisKey);
 
         if (statusStr == null) {
+            log.warn("Archive status check failed: Ticket '{}' not found or expired", ticket);
             throw new ResourceNotFoundException("Тикет не найден или истек");
         }
 
@@ -113,7 +114,7 @@ public class ArchiveService {
                     zipOut.closeEntry();
                 }
             } catch (Exception e) {
-                log.error("Ошибка при синхронном создании ZIP", e);
+                log.error("Failed to create synchronous ZIP stream for path: {}", path, e);
                 throw new StorageOperationException("Не удалось создать архив " + path, e);
             }
         };

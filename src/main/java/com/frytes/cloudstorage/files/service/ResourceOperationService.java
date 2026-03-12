@@ -58,6 +58,7 @@ public class ResourceOperationService {
         String target = PathUtils.buildUserPath(userId, PathUtils.sanitize(toPath));
 
         if (userStorageReader.isObjectExist(target)) {
+            log.warn("Move failed: Target path '{}' already exists for user {}", toPath, userId);
             throw new ResourceAlreadyExistsException("Ресурс по целевому пути уже существует");
         }
 
@@ -88,7 +89,7 @@ public class ResourceOperationService {
                 successfullyCopiedSources.add(oldKey);
                 successfullyCopiedTargets.add(newKey);
             } catch (Exception e) {
-                log.error("Сбой при копировании объекта, запускаем откат: {}", e.getMessage());
+                log.error("Folder move failed. Rolling back successfully copied files. Source: {}", sourcePrefix, e);
                 rollbackMovedFiles(successfullyCopiedTargets);
                 throw new StorageOperationException("Ошибка при перемещении папки. Изменения отменены.", e);
             }
@@ -117,7 +118,8 @@ public class ResourceOperationService {
     private void validateNotRoot(String path, String operation) {
         String clean = PathUtils.sanitize(path);
         if (clean.isEmpty() || clean.equals("/")) {
-            throw new InvalidPathException("Операция '" + operation + "' недопустима для корневой директории");
+            log.warn("Validation failed: Operation '{}' not allowed on root directory", operation);
+            throw new InvalidPathException("Операция недопустима для корневой директории");
         }
     }
 }

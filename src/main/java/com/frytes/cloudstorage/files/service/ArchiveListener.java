@@ -57,7 +57,7 @@ public class ArchiveListener {
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void listen(ArchiveTask task) {
-        log.info("📦 [Ticket: {}] Начало архивации", task.ticketId());
+        log.info("[Ticket: {}] Starting asynchronous archiving", task.ticketId());
 
         String redisKey = "archive:status:" + task.ticketId();
         redisTemplate.expire(redisKey, appProperties.archive().expirationHours(), TimeUnit.HOURS);
@@ -98,7 +98,7 @@ public class ArchiveListener {
             archiveStorageRepository.uploadArchive(archiveName, pipedIn);
             zipFuture.get(appProperties.archive().timeoutMinutes(), TimeUnit.MINUTES);
 
-            log.info("✅ [Ticket: {}] Архив успешно загружен", task.ticketId());
+            log.info("[Ticket: {}] Archive successfully uploaded to temporary storage", task.ticketId());
             redisTemplate.opsForValue().set(redisKey, ArchiveStatus.READY.name(), appProperties.archive().expirationHours(), TimeUnit.HOURS);
 
             String downloadUrl = archiveStorageRepository.getPresignedUrl(archiveName);
@@ -106,13 +106,13 @@ public class ArchiveListener {
 
         }  catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("❌ [Ticket: {}] Архивация прервана", task.ticketId(), e);
+            log.error("[Ticket: {}] Archiving process was interrupted", task.ticketId(), e);
             handleError(task, redisKey);
         } catch (TimeoutException e) {
-            log.error("❌ [Ticket: {}] Превышено время ожидания", task.ticketId(), e);
+            log.error("[Ticket: {}] Archiving process timed out", task.ticketId(), e);
             handleError(task, redisKey);
         } catch (Exception e) {
-            log.error("❌ [Ticket: {}] Ошибка при архивации", task.ticketId(), e);
+            log.error("[Ticket: {}] Unexpected error during archiving", task.ticketId(), e);
             handleError(task, redisKey);
         }
     }

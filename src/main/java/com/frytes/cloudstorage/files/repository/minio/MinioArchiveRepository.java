@@ -9,12 +9,14 @@ import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.http.Method;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
 import java.io.InputStream;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Repository
 public class MinioArchiveRepository implements ArchiveStorageRepository {
 
@@ -49,7 +51,8 @@ public class MinioArchiveRepository implements ArchiveStorageRepository {
                             .build()
             );
         } catch (Exception e) {
-            throw new FileUploadException("Ошибка сохранения архива в temp-archives: " + e.getMessage(), e);
+            log.error("Failed to upload archive to MinIO. Object: {}", objectName, e);
+            throw new FileUploadException("Ошибка сохранения архива", e);
         }
     }
 
@@ -65,7 +68,8 @@ public class MinioArchiveRepository implements ArchiveStorageRepository {
                             .build()
             );
         } catch (Exception e) {
-            throw new StorageOperationException("Ошибка генерации ссылки: " + e.getMessage(), e);
+            log.error("Failed to generate presigned URL in MinIO. Object: {}", objectName, e);
+            throw new StorageOperationException("Ошибка генерации ссылки на архив", e);
         }
     }
 }

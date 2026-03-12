@@ -1,5 +1,6 @@
 package com.frytes.cloudstorage.files.service;
 
+import com.frytes.cloudstorage.common.exception.InvalidPathException;
 import com.frytes.cloudstorage.common.exception.ResourceAlreadyExistsException;
 import com.frytes.cloudstorage.common.util.PathUtils;
 import com.frytes.cloudstorage.files.dto.FileDto;
@@ -43,13 +44,15 @@ public class DirectoryService {
     public FileDto createDirectory(Long userId, String path) {
         String cleanPath = PathUtils.sanitize(path);
         if (cleanPath.isEmpty() || cleanPath.equals("/")) {
-            throw new com.frytes.cloudstorage.common.exception.InvalidPathException("Операция 'Создание папки' недопустима для корневой директории");
+            log.warn("Directory creation failed: Attempted to create root directory for user {}", userId);
+            throw new InvalidPathException("Операция 'Создание папки' недопустима для корневой директории");
         }
 
         String processedPath = PathUtils.ensureTrailingSlash(cleanPath);
         String objectName = PathUtils.buildUserPath(userId, processedPath);
 
         if (userStorageReader.isObjectExist(objectName)) {
+            log.warn("Directory creation failed: Path '{}' already exists for user {}", cleanPath, userId);
             throw new ResourceAlreadyExistsException("Папка с таким именем уже существует");
         }
 
