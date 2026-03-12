@@ -1,4 +1,4 @@
-package com.frytes.cloudstorage.users.dto;
+package com.frytes.cloudstorage.users.dto.response;
 
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import org.springframework.security.core.GrantedAuthority;

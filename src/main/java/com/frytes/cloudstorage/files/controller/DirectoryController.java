@@ -1,7 +1,7 @@
 package com.frytes.cloudstorage.files.controller;
 
 import com.frytes.cloudstorage.common.validate.ValidStoragePath;
-import com.frytes.cloudstorage.files.dto.FileDto;
+import com.frytes.cloudstorage.files.dto.response.FileDto;
 import com.frytes.cloudstorage.files.service.DirectoryService;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;

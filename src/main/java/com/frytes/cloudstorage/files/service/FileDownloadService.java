@@ -2,7 +2,7 @@ package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.common.util.PathUtils;
 import com.frytes.cloudstorage.config.properties.AppProperties;
-import com.frytes.cloudstorage.files.dto.DownloadResponse;
+import com.frytes.cloudstorage.files.dto.response.DownloadResponse;
 import com.frytes.cloudstorage.files.dto.DownloadType;
 import com.frytes.cloudstorage.files.model.StorageItem;
 import com.frytes.cloudstorage.files.repository.UserStorageReader;

@@ -16,7 +16,7 @@ export const sendMoveObject = async (source, target) => {
     const url = `${API_MOVE_FILES}?${params.toString()}`;
 
     const response = await fetch(url, {
-        method: 'POST',
+        method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
         },

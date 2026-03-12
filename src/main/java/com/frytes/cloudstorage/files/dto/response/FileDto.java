@@ -1,6 +1,7 @@
-package com.frytes.cloudstorage.files.dto;
+package com.frytes.cloudstorage.files.dto.response;
 
 
+import com.frytes.cloudstorage.files.dto.FileType;
 import lombok.Builder;
 
 @Builder

@@ -2,8 +2,8 @@ package com.frytes.cloudstorage.files.controller;
 
 import com.frytes.cloudstorage.common.validate.ValidStoragePath;
 import com.frytes.cloudstorage.files.dto.ArchiveStatus;
-import com.frytes.cloudstorage.files.dto.DownloadResponse;
-import com.frytes.cloudstorage.files.dto.FileDto;
+import com.frytes.cloudstorage.files.dto.response.DownloadResponse;
+import com.frytes.cloudstorage.files.dto.response.FileDto;
 import com.frytes.cloudstorage.files.service.*;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import jakarta.validation.constraints.NotBlank;
@@ -111,7 +111,7 @@ public class FileController {
         fileUploadService.uploadFiles(user.getId(), path, files);
     }
 
-    @PostMapping("/move")
+    @PutMapping("/move")
     @ResponseStatus(HttpStatus.OK)
     public void moveFile(
             @RequestParam("from") @ValidStoragePath String from,

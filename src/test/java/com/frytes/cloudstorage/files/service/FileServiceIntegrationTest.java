@@ -1,7 +1,7 @@
 package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.TestcontainersConfiguration;
-import com.frytes.cloudstorage.files.dto.FileDto;
+import com.frytes.cloudstorage.files.dto.response.FileDto;
 import com.frytes.cloudstorage.files.dto.FileType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

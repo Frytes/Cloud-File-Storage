@@ -1,7 +1,7 @@
 package com.frytes.cloudstorage.users.service;
 
 import com.frytes.cloudstorage.common.exception.UserAlreadyExistsException;
-import com.frytes.cloudstorage.users.dto.RegisterRequest;
+import com.frytes.cloudstorage.users.dto.request.RegisterRequest;
 import com.frytes.cloudstorage.users.dto.UserMapper;
 import com.frytes.cloudstorage.users.model.Provider;
 import com.frytes.cloudstorage.users.model.Role;

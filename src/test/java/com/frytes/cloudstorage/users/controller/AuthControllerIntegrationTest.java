@@ -2,8 +2,8 @@ package com.frytes.cloudstorage.users.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.frytes.cloudstorage.TestcontainersConfiguration;
-import com.frytes.cloudstorage.users.dto.LoginRequest;
-import com.frytes.cloudstorage.users.dto.RegisterRequest;
+import com.frytes.cloudstorage.users.dto.request.LoginRequest;
+import com.frytes.cloudstorage.users.dto.request.RegisterRequest;
 import com.frytes.cloudstorage.users.model.Provider;
 import com.frytes.cloudstorage.users.model.Role;
 import com.frytes.cloudstorage.users.model.User;

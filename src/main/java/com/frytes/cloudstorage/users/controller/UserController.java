@@ -1,6 +1,6 @@
 package com.frytes.cloudstorage.users.controller;
 
-import com.frytes.cloudstorage.users.dto.AuthResponse;
+import com.frytes.cloudstorage.users.dto.response.AuthResponse;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

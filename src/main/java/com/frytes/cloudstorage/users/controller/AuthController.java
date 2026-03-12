@@ -1,8 +1,8 @@
 package com.frytes.cloudstorage.users.controller;
 
-import com.frytes.cloudstorage.users.dto.AuthResponse;
-import com.frytes.cloudstorage.users.dto.LoginRequest;
-import com.frytes.cloudstorage.users.dto.RegisterRequest;
+import com.frytes.cloudstorage.users.dto.response.AuthResponse;
+import com.frytes.cloudstorage.users.dto.request.LoginRequest;
+import com.frytes.cloudstorage.users.dto.request.RegisterRequest;
 import com.frytes.cloudstorage.users.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
