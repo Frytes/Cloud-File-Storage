@@ -10,7 +10,4 @@ public record FileDto(
         FileType type,
         String path,
         String lastModified
-) {
-    public static final String TYPE_DIRECTORY = "DIRECTORY";
-    public static final String TYPE_FILE = "FILE";
-}
+) {}

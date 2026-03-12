@@ -2,6 +2,7 @@ package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.TestcontainersConfiguration;
 import com.frytes.cloudstorage.config.properties.MinioProperties;
+import com.frytes.cloudstorage.files.repository.UserStorageWriter;
 import io.minio.MinioClient;
 import io.minio.StatObjectArgs;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 class MinioServiceIntegrationTest {
 
     @Autowired
-    private MinioService minioService;
+    private UserStorageWriter userStorageWriter;
 
     @Autowired
     private MinioClient minioClient;
@@ -28,7 +29,7 @@ class MinioServiceIntegrationTest {
     void shouldCreateDirectoryInMinio() {
         String folderName = "user-1-files/test-folder/";
 
-        minioService.createDirectory(folderName);
+        userStorageWriter.createDirectory(folderName);
 
         assertThatCode(() -> minioClient.statObject(
                 StatObjectArgs.builder()

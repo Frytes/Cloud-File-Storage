@@ -7,8 +7,9 @@ import com.frytes.cloudstorage.config.RabbitMQConfig;
 import com.frytes.cloudstorage.config.properties.AppProperties;
 import com.frytes.cloudstorage.files.dto.ArchiveStatus;
 import com.frytes.cloudstorage.files.dto.ArchiveTask;
-import io.minio.Result;
-import io.minio.messages.Item;
+import com.frytes.cloudstorage.files.model.StorageItem;
+import com.frytes.cloudstorage.files.repository.ArchiveStorageRepository;
+import com.frytes.cloudstorage.files.repository.UserStorageReader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -30,14 +32,22 @@ public class ArchiveService {
 
     private final RabbitTemplate rabbitTemplate;
     private final StringRedisTemplate redisTemplate;
-    private final MinioService minioService;
     private final AppProperties appProperties;
+
+    private final ArchiveStorageRepository archiveStorageRepository;
+    private final UserStorageReader userStorageReader;
 
     public String sendArchivingTask(Long userId, String username, String path, Long totalSize) {
         String ticketId = UUID.randomUUID().toString();
 
         String redisKey = "archive:status:" + ticketId;
-        redisTemplate.opsForValue().set(redisKey, ArchiveStatus.IN_PROGRESS.name(), 24, TimeUnit.HOURS);
+
+        redisTemplate.opsForValue().set(
+                redisKey,
+                ArchiveStatus.IN_PROGRESS.name(),
+                appProperties.archive().timeoutMinutes(),
+                TimeUnit.MINUTES
+        );
 
         ArchiveTask task = ArchiveTask.builder()
                 .ticketId(ticketId)
@@ -74,7 +84,7 @@ public class ArchiveService {
 
         if (status == ArchiveStatus.READY) {
             String archiveName = "user-" + userId + "-files/archive-" + ticket + ".zip";
-            String url = minioService.getPresignedUrl(archiveName);
+            String url = archiveStorageRepository.getPresignedUrl(archiveName);
             return status.toResponse(url, appProperties.archive().expirationHours() * 3600);
         }
 
@@ -86,19 +96,18 @@ public class ArchiveService {
 
         return outputStream -> {
             try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
-                Iterable<Result<Item>> results = minioService.listObjectsRecursive(prefix);
+                List<StorageItem> results = userStorageReader.listObjects(prefix, true);
 
-                for (Result<Item> result : results) {
-                    Item item = result.get();
+                for (StorageItem item : results) {
                     if (item.isDir()) {
                         continue;
                     }
 
-                    String objectName = item.objectName();
+                    String objectName = item.path();
                     String entryName = objectName.substring(prefix.length());
 
                     zipOut.putNextEntry(new ZipEntry(entryName));
-                    try (InputStream fileStream = minioService.getFile(objectName)) {
+                    try (InputStream fileStream = userStorageReader.getFile(objectName)) {
                         fileStream.transferTo(zipOut);
                     }
                     zipOut.closeEntry();

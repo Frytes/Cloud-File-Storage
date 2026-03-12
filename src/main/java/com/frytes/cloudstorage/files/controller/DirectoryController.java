@@ -1,7 +1,7 @@
 package com.frytes.cloudstorage.files.controller;
 
 import com.frytes.cloudstorage.files.dto.FileDto;
-import com.frytes.cloudstorage.files.service.FileService;
+import com.frytes.cloudstorage.files.service.DirectoryService;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -20,14 +20,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DirectoryController {
 
-    private final FileService fileService;
+    private final DirectoryService directoryService;
 
     @GetMapping
     public List<FileDto> getAllDirectory(
             @RequestParam("path") String path,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        return fileService.getAllDirectory(user.getId(), path);
+        return directoryService.getAllDirectory(user.getId(), path);
     }
 
     @PostMapping
@@ -39,7 +39,7 @@ public class DirectoryController {
 
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        FileDto newDirectory = fileService.createDirectory(user.getId(), path);
+        FileDto newDirectory = directoryService.createDirectory(user.getId(), path);
         return ResponseEntity.ok(newDirectory);
     }
 }

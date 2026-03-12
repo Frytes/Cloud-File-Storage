@@ -18,7 +18,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FileServiceIntegrationTest {
 
     @Autowired
-    private FileService fileService;
+    private FileUploadService fileUploadService;
+
+    @Autowired
+    private SearchService searchService;
 
     @Test
     void shouldUploadAndSearchFile() {
@@ -31,8 +34,8 @@ class FileServiceIntegrationTest {
                 "Hello, Integration Test!".getBytes()
         );
 
-        fileService.uploadFiles(userId, uploadPath, List.of(mockFile));
-        List<FileDto> foundFiles = fileService.searchUserFiles(userId, "report");
+        fileUploadService.uploadFiles(userId, uploadPath, List.of(mockFile));
+        List<FileDto> foundFiles = searchService.searchUserFiles(userId, "report");
 
         assertThat(foundFiles).hasSize(1);
         FileDto savedFile = foundFiles.getFirst();

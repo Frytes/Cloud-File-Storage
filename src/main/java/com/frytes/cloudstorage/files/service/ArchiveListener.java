@@ -6,8 +6,9 @@ import com.frytes.cloudstorage.config.RabbitMQConfig;
 import com.frytes.cloudstorage.config.properties.AppProperties;
 import com.frytes.cloudstorage.files.dto.ArchiveStatus;
 import com.frytes.cloudstorage.files.dto.ArchiveTask;
-import io.minio.Result;
-import io.minio.messages.Item;
+import com.frytes.cloudstorage.files.model.StorageItem;
+import com.frytes.cloudstorage.files.repository.ArchiveStorageRepository;
+import com.frytes.cloudstorage.files.repository.UserStorageReader;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Component;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -31,21 +33,22 @@ import java.util.zip.ZipOutputStream;
 @Component
 public class ArchiveListener {
 
-    private final MinioService minioService;
+    private final ArchiveStorageRepository archiveStorageRepository;
+    private final UserStorageReader userStorageReader;
     private final StringRedisTemplate redisTemplate;
     private final SimpMessagingTemplate messagingTemplate;
     private final TaskExecutor applicationTaskExecutor;
     private final AppProperties appProperties;
 
-    private static final int PIPE_BUFFER_SIZE = 5 * 1024 * 1024;
-    private static final int TIMEOUT = 10;
 
-    public ArchiveListener(MinioService minioService,
+    public ArchiveListener(ArchiveStorageRepository archiveStorageRepository,
+                           UserStorageReader userStorageReader,
                            StringRedisTemplate redisTemplate,
                            SimpMessagingTemplate messagingTemplate,
                            @Qualifier("archiveTaskExecutor") TaskExecutor applicationTaskExecutor,
                            AppProperties appProperties) {
-        this.minioService = minioService;
+        this.archiveStorageRepository = archiveStorageRepository;
+        this.userStorageReader = userStorageReader;
         this.redisTemplate = redisTemplate;
         this.messagingTemplate = messagingTemplate;
         this.applicationTaskExecutor = applicationTaskExecutor;
@@ -65,23 +68,24 @@ public class ArchiveListener {
                 PathUtils.buildUserPath(task.userId(), PathUtils.sanitize(task.path()))
         );
 
-        try (PipedInputStream pipedIn = new PipedInputStream(PIPE_BUFFER_SIZE);
+        try (PipedInputStream pipedIn = new PipedInputStream(appProperties.archive().bufferSizeBytes());
              PipedOutputStream pipedOut = new PipedOutputStream(pipedIn)) {
 
             CompletableFuture<Void> zipFuture = CompletableFuture.runAsync(() -> {
                 try (ZipOutputStream zipOut = new ZipOutputStream(pipedOut)) {
                     zipOut.setLevel(Deflater.NO_COMPRESSION);
-                    Iterable<Result<Item>> results = minioService.listObjectsRecursive(sourcePrefix);
+                    List<StorageItem> results = userStorageReader.listObjects(sourcePrefix, true);
 
-                    for (Result<Item> result : results) {
-                        Item item = result.get();
-                        if (item.isDir()) continue;
+                    for (StorageItem item : results) {
+                        if (item.isDir()) {
+                            continue;
+                        }
 
-                        String objectName = item.objectName();
+                        String objectName = item.path();
                         String entryName = objectName.substring(sourcePrefix.length());
 
                         zipOut.putNextEntry(new ZipEntry(entryName));
-                        try (InputStream fileStream = minioService.getFile(objectName)) {
+                        try (InputStream fileStream = userStorageReader.getFile(objectName)) {
                             fileStream.transferTo(zipOut);
                         }
                         zipOut.closeEntry();
@@ -91,16 +95,16 @@ public class ArchiveListener {
                 }
             }, applicationTaskExecutor);
 
-            minioService.uploadArchive(archiveName, pipedIn);
-            zipFuture.get(TIMEOUT, TimeUnit.MINUTES);
+            archiveStorageRepository.uploadArchive(archiveName, pipedIn);
+            zipFuture.get(appProperties.archive().timeoutMinutes(), TimeUnit.MINUTES);
 
             log.info("✅ [Ticket: {}] Архив успешно загружен", task.ticketId());
             redisTemplate.opsForValue().set(redisKey, ArchiveStatus.READY.name(), appProperties.archive().expirationHours(), TimeUnit.HOURS);
 
-            String downloadUrl = minioService.getPresignedUrl(archiveName);
+            String downloadUrl = archiveStorageRepository.getPresignedUrl(archiveName);
             sendWebSocketMessage(task, ArchiveStatus.READY.name(), "downloadUrl", downloadUrl);
 
-        } catch (InterruptedException e) {
+        }  catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("❌ [Ticket: {}] Архивация прервана", task.ticketId(), e);
             handleError(task, redisKey);
@@ -115,7 +119,12 @@ public class ArchiveListener {
 
 
     private void handleError(ArchiveTask task, String redisKey) {
-        redisTemplate.opsForValue().set(redisKey, ArchiveStatus.ERROR.name(), 24, TimeUnit.HOURS);
+        redisTemplate.opsForValue().set(
+                redisKey,
+                ArchiveStatus.ERROR.name(),
+                appProperties.archive().expirationHours(),
+                TimeUnit.HOURS
+        );
         sendWebSocketMessage(task, ArchiveStatus.ERROR.name(), "message", "Ошибка при создании архива");
     }
 

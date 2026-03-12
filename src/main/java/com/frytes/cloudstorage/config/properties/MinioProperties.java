@@ -8,7 +8,8 @@ public record MinioProperties(
         String externalUrl,
         String accessKey,
         String secretKey,
-        Buckets buckets
+        Buckets buckets,
+        long streamPartSize
 ) {
     public record Buckets(String userFiles, String tempArchives) {}
 }

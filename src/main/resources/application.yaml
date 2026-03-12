@@ -57,23 +57,26 @@ spring:
     password: ${RABBITMQ_PASSWORD:guest}
 
   tomcat:
-    max-parameters: 10000          # Максимальное количество параметров в HTTP запросе.
+    max-parameters: 10000           # Максимальное количество параметров в HTTP запросе.
 
   servlet:
     multipart:
-      max-file-size: 1GB           # Максимальный размер одного загружаемого файла.
-      max-request-size: 1GB        # Максимальный размер всего multipart запроса
+      max-file-size: 1GB            # Максимальный размер одного загружаемого файла.
+      max-request-size: 1GB         # Максимальный размер всего multipart запроса
 
 app:
   frontend:
     url: ${FRONTEND_URL:http://localhost/files}
   search:
-    limit: 50                     # Максимальное количество результатов поиска.
+    limit: 50                       # Максимальное количество результатов поиска.
   upload:
-    max-files-per-request: 10000  # Максимальное количество файлов в одном запросе на загрузку
+    max-files-per-request: 10000    # Максимальное количество файлов в одном запросе на загрузку
   archive:
-    expiration-hours: 24          # Время жизни архива и ссылки по ТЗ
-    executor:                     # Настройки пула потоков для архивации
+    expiration-hours: 24            # Время жизни временного архива и ссылки на скачивание
+    timeout-minutes: 30             # Максимальное время ожидания сборки ZIP-архива (защита от зависания потока)
+    buffer-size-bytes: 5242880      # Размер буфера в оперативной памяти (5 МБ) при потоковой передаче ZIP в MinIO
+    sync-zip-limit-bytes: 104857600 # 100MB - максимальный размер папки для синхронной упаковки в ZIP
+    executor:                       # Настройки пула потоков (ограничение одновременных задач архивации)
       core-pool-size: 2
       max-pool-size: 5
       queue-capacity: 50
@@ -84,6 +87,7 @@ minio:
   external-url: ${MINIO_EXTERNAL_URL:http://localhost:9000}
   access-key: ${MINIO_ACCESS_KEY:minioadmin}
   secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  stream-part-size: 10485760
   buckets:
     user-files: user-files
     temp-archives: temp-archives

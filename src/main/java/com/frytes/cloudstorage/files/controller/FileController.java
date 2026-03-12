@@ -3,8 +3,7 @@ package com.frytes.cloudstorage.files.controller;
 import com.frytes.cloudstorage.files.dto.ArchiveStatus;
 import com.frytes.cloudstorage.files.dto.DownloadResponse;
 import com.frytes.cloudstorage.files.dto.FileDto;
-import com.frytes.cloudstorage.files.service.ArchiveService;
-import com.frytes.cloudstorage.files.service.FileService;
+import com.frytes.cloudstorage.files.service.*;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -30,15 +29,21 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FileController {
 
-    private final FileService fileService;
     private final ArchiveService archiveService;
+    private final FileUploadService fileUploadService;
+    private final FileDownloadService fileDownloadService;
+    private final SearchService searchService;
+    private final ResourceOperationService resourceOperationService;
+
+
+
 
     @GetMapping
     public FileDto getFileInfo(
             @RequestParam("path") String path,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        return fileService.getFileInfo(user.getId(), path);
+        return resourceOperationService.getFileInfo(user.getId(), path);
     }
 
     @GetMapping("/search")
@@ -49,7 +54,7 @@ public class FileController {
 
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        return fileService.searchUserFiles(user.getId(), query);
+        return searchService.searchUserFiles(user.getId(), query);
     }
 
     @GetMapping("/download")
@@ -57,7 +62,7 @@ public class FileController {
             @RequestParam("path") String path,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        DownloadResponse response = fileService.processDownload(user.getId(), user.getUsername(), path);
+        DownloadResponse response = fileDownloadService.processDownload(user.getId(), user.getUsername(), path);
 
         return switch (response.type()) {
             case ASYNC_TASK -> ResponseEntity.accepted().body(Map.of(
@@ -103,7 +108,7 @@ public class FileController {
             @AuthenticationPrincipal CustomUserDetails user
     ) {
 
-        fileService.uploadFiles(user.getId(), path, files);
+        fileUploadService.uploadFiles(user.getId(), path, files);
     }
 
     @PostMapping("/move")
@@ -120,7 +125,7 @@ public class FileController {
 
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        fileService.moveObject(user.getId(), from, to);
+        resourceOperationService.moveObject(user.getId(), from, to);
     }
 
     @DeleteMapping
@@ -132,7 +137,7 @@ public class FileController {
 
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        fileService.deleteObject(user.getId(), path);
+        resourceOperationService.deleteObject(user.getId(), path);
     }
 
     private ResponseEntity<Object> buildAttachmentResponse(String fileName, String contentType, Object body) {

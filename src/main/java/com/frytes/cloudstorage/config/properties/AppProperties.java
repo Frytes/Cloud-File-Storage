@@ -12,7 +12,13 @@ public record AppProperties(
     public record Frontend(String url) {}
     public record Search(int limit) {}
     public record Upload(int maxFilesPerRequest) {}
-    public record Archive(long expirationHours, Executor executor) {
+    public record Archive(
+            long expirationHours,
+            int timeoutMinutes,
+            int bufferSizeBytes,
+            long syncZipLimitBytes,
+            Executor executor
+    ) {
         public record Executor(int corePoolSize, int maxPoolSize, int queueCapacity) {}
     }
 }
