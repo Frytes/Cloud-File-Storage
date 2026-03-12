@@ -1,12 +1,12 @@
 package com.frytes.cloudstorage.files.controller;
 
+import com.frytes.cloudstorage.common.validate.ValidStoragePath;
 import com.frytes.cloudstorage.files.dto.ArchiveStatus;
 import com.frytes.cloudstorage.files.dto.DownloadResponse;
 import com.frytes.cloudstorage.files.dto.FileDto;
 import com.frytes.cloudstorage.files.service.*;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -114,15 +114,8 @@ public class FileController {
     @PostMapping("/move")
     @ResponseStatus(HttpStatus.OK)
     public void moveFile(
-            @RequestParam("from")
-            @NotBlank(message = "Исходный путь обязателен")
-            String from,
-
-            @RequestParam("to")
-            @NotBlank(message = "Целевой путь обязателен")
-            @Pattern(regexp = "^(?!.*\\.\\.).*", message = "Недопустимый путь")
-            String to,
-
+            @RequestParam("from") @ValidStoragePath String from,
+            @RequestParam("to") @ValidStoragePath String to,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         resourceOperationService.moveObject(user.getId(), from, to);
