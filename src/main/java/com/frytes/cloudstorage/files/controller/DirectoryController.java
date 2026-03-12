@@ -1,7 +1,7 @@
 package com.frytes.cloudstorage.files.controller;
 
 import com.frytes.cloudstorage.common.validate.ValidStoragePath;
-import com.frytes.cloudstorage.files.dto.response.FileDto;
+import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
 import com.frytes.cloudstorage.files.service.DirectoryService;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ public class DirectoryController {
     private final DirectoryService directoryService;
 
     @GetMapping
-    public List<FileDto> getAllDirectory(
+    public List<FileResponseDto> getAllDirectory(
             @RequestParam("path") String path,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
@@ -30,11 +30,11 @@ public class DirectoryController {
     }
 
     @PostMapping
-    public ResponseEntity<FileDto> createDirectory(
+    public ResponseEntity<FileResponseDto> createDirectory(
             @RequestParam("path") @ValidStoragePath String path,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        FileDto newDirectory = directoryService.createDirectory(user.getId(), path);
+        FileResponseDto newDirectory = directoryService.createDirectory(user.getId(), path);
         return ResponseEntity.ok(newDirectory);
     }
 }

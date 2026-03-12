@@ -1,7 +1,6 @@
 package com.frytes.cloudstorage.users.model;
 
 import jakarta.persistence.*;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -32,7 +31,6 @@ public class User {
     @Column(nullable = false)
     private Provider provider;
 
-    @Builder
     public User(String username, String password, Role role, Provider provider) {
         this.username = username;
         this.password = password;

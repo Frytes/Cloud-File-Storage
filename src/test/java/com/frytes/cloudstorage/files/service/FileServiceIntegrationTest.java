@@ -1,7 +1,7 @@
 package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.TestcontainersConfiguration;
-import com.frytes.cloudstorage.files.dto.response.FileDto;
+import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
 import com.frytes.cloudstorage.files.dto.FileType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
-class FileServiceIntegrationTest {
+class FileUploadAndSearchIntegrationTest {
 
     @Autowired
     private FileUploadService fileUploadService;
@@ -35,10 +35,10 @@ class FileServiceIntegrationTest {
         );
 
         fileUploadService.uploadFiles(userId, uploadPath, List.of(mockFile));
-        List<FileDto> foundFiles = searchService.searchUserFiles(userId, "report");
+        List<FileResponseDto> foundFiles = searchService.searchUserFiles(userId, "report");
 
         assertThat(foundFiles).hasSize(1);
-        FileDto savedFile = foundFiles.getFirst();
+        FileResponseDto savedFile = foundFiles.getFirst();
 
         assertThat(savedFile.name()).isEqualTo("report.txt");
         assertThat(savedFile.path()).isEqualTo("documents/work/report.txt");

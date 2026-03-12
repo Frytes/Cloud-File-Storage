@@ -44,12 +44,13 @@ class AuthControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        User user = User.builder()
-                .username("test_user")
-                .password(passwordEncoder.encode("Secret123!"))
-                .role(Role.USER)
-                .provider(Provider.LOCAL)
-                .build();
+
+        User user = new User(
+                "test_user",
+                passwordEncoder.encode("Secret123!"),
+                Role.USER,
+                Provider.LOCAL);
+
         userRepository.save(user);
     }
 

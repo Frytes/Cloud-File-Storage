@@ -26,7 +26,7 @@ export const WebSocketProvider = ({children}) => {
                 if (response.status === 200) {
                     const data = await response.json();
                     if (data.status === 'READY') {
-                        downloadFileByUrl(body.downloadUrl);
+                        downloadFileByUrl(data.downloadUrl);
                         showInfo("Архив, который вы заказывали ранее, готов!");
                     } else if (data.status === 'ERROR') {
                         showError("Не удалось создать один из архивов.");

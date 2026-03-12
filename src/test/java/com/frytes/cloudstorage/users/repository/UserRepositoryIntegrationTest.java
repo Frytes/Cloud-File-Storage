@@ -25,12 +25,11 @@ class UserRepositoryIntegrationTest {
 
     @Test
     void shouldSaveAndFindUserByUsername() {
-        User user = User.builder()
-                .username("integration_test_user")
-                .password("secret123")
-                .role(Role.USER)
-                .provider(Provider.LOCAL)
-                .build();
+        User user = new User(
+                "integration_test_user",
+                "secret123",
+                Role.USER,
+                Provider.LOCAL);
 
         userRepository.save(user);
 

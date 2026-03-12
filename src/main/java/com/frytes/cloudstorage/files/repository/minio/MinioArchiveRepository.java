@@ -28,11 +28,11 @@ public class MinioArchiveRepository implements ArchiveStorageRepository {
 
 
     public MinioArchiveRepository(
-            MinioProperties minioProperties1, MinioClient minioClient,
+            MinioClient minioClient,
             @Qualifier("signerMinioClient") MinioClient signerMinioClient,
             MinioProperties minioProperties,
             AppProperties appProperties) {
-        this.minioProperties = minioProperties1;
+        this.minioProperties = minioProperties;
         this.minioClient = minioClient;
         this.signerMinioClient = signerMinioClient;
         this.tempArchivesBucket = minioProperties.buckets().tempArchives();

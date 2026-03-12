@@ -5,7 +5,7 @@ import com.frytes.cloudstorage.files.dto.FileType;
 import lombok.Builder;
 
 @Builder
-public record FileDto(
+public record FileResponseDto(
         String name,
         Long size,
         FileType type,

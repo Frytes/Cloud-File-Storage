@@ -47,9 +47,9 @@ public class MinioInitializer {
                             .config(lifecycleConfig)
                             .build()
             );
-            log.info("Lifecycle policy настроена для бакета: {} (удаление через 1 день)", bucketName);
+            log.info("Lifecycle policy configured for bucket: {} (1 day expiration)", bucketName);
         } catch (Exception e) {
-            log.error("Не удалось настроить Lifecycle policy для {}: {}", bucketName, e.getMessage());
+            log.error("Failed to configure Lifecycle policy for {}: {}", bucketName, e.getMessage());
         }
     }
 
@@ -62,12 +62,12 @@ public class MinioInitializer {
                 minioClient.makeBucket(
                         MakeBucketArgs.builder().bucket(bucketName).build()
                 );
-                log.info("Бакет успешно создан: {}", bucketName);
+                log.info("Bucket successfully created: {}", bucketName);
             } else {
-                log.info("Бакет уже существует: {}", bucketName);
+                log.info("Bucket already exists: {}", bucketName);
             }
         } catch (Exception e) {
-            log.error("Критическая ошибка при инициализации MinIO бакета {}: {}", bucketName, e.getMessage());
+            log.error("Critical error during MinIO bucket initialization {}: {}", bucketName, e.getMessage());
         }
     }
 }

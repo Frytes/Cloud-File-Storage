@@ -4,7 +4,7 @@ import com.frytes.cloudstorage.common.exception.InvalidPathException;
 import com.frytes.cloudstorage.common.exception.ResourceAlreadyExistsException;
 import com.frytes.cloudstorage.common.exception.StorageOperationException;
 import com.frytes.cloudstorage.common.util.PathUtils;
-import com.frytes.cloudstorage.files.dto.response.FileDto;
+import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
 import com.frytes.cloudstorage.files.dto.FileType;
 import com.frytes.cloudstorage.files.model.StorageItem;
 import com.frytes.cloudstorage.files.model.StorageMetadata;
@@ -25,13 +25,13 @@ public class ResourceOperationService {
     private final UserStorageReader userStorageReader;
     private final UserStorageWriter userStorageWriter;
 
-    public FileDto getFileInfo(Long userId, String path) {
+    public FileResponseDto getFileInfo(Long userId, String path) {
         String cleanPath = PathUtils.sanitize(path);
         String objectName = PathUtils.buildUserPath(userId, cleanPath);
         StorageMetadata stat = userStorageReader.getMetadata(objectName);
         boolean isDir = cleanPath.endsWith("/");
 
-        return FileDto.builder()
+        return FileResponseDto.builder()
                 .name(PathUtils.getFileNameFromPath(cleanPath))
                 .path(cleanPath)
                 .size(stat.size())

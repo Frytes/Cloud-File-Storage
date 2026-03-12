@@ -3,7 +3,7 @@ package com.frytes.cloudstorage.files.controller;
 import com.frytes.cloudstorage.common.validate.ValidStoragePath;
 import com.frytes.cloudstorage.files.dto.ArchiveStatus;
 import com.frytes.cloudstorage.files.dto.response.DownloadResponse;
-import com.frytes.cloudstorage.files.dto.response.FileDto;
+import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
 import com.frytes.cloudstorage.files.service.*;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import jakarta.validation.constraints.NotBlank;
@@ -39,15 +39,15 @@ public class FileController {
 
 
     @GetMapping
-    public FileDto getFileInfo(
-            @RequestParam("path") String path,
+    public FileResponseDto getFileInfo(
+            @RequestParam("path") @NotBlank @ValidStoragePath String path,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         return resourceOperationService.getFileInfo(user.getId(), path);
     }
 
     @GetMapping("/search")
-    public List<FileDto> searchFiles(
+    public List<FileResponseDto> searchFiles(
             @RequestParam("query")
             @NotBlank(message = "Поисковой запрос не может быть пустым")
             String query,
@@ -107,15 +107,14 @@ public class FileController {
             @RequestParam("object") List<MultipartFile> files,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-
         fileUploadService.uploadFiles(user.getId(), path, files);
     }
 
     @PutMapping("/move")
     @ResponseStatus(HttpStatus.OK)
     public void moveFile(
-            @RequestParam("from") @ValidStoragePath String from,
-            @RequestParam("to") @ValidStoragePath String to,
+            @RequestParam("from") @NotBlank @ValidStoragePath String from,
+            @RequestParam("to") @NotBlank @ValidStoragePath String to,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         resourceOperationService.moveObject(user.getId(), from, to);
@@ -124,10 +123,7 @@ public class FileController {
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteFile(
-            @RequestParam("path")
-            @NotBlank(message = "Путь для удаления не может быть пустым")
-            String path,
-
+            @RequestParam("path") @NotBlank @ValidStoragePath String path,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         resourceOperationService.deleteObject(user.getId(), path);
