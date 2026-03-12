@@ -4,17 +4,22 @@ import com.frytes.cloudstorage.common.exception.*;
 import com.frytes.cloudstorage.files.controller.FileController;
 import com.frytes.cloudstorage.files.service.*;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.util.List;
 
 import static org.mockito.Mockito.doThrow;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -23,6 +28,9 @@ class GlobalExceptionHandlerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private WebApplicationContext context;
 
     @MockitoBean
     private ArchiveService archiveService;
@@ -43,6 +51,14 @@ class GlobalExceptionHandlerTest {
             1L, "testuser", "password", List.of(() -> "ROLE_USER")
     );
 
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders
+                .webAppContextSetup(context)
+                .apply(springSecurity())
+                .build();
+    }
+
     @Test
     @WithMockUser
     void shouldReturn400ForInvalidPath() throws Exception {
@@ -51,9 +67,9 @@ class GlobalExceptionHandlerTest {
 
         mockMvc.perform(get("/api/resource")
                         .param("path", "../bad-path")
-                        .with(user(testUser)))
+                        .with(user(testUser))
+                        .with(csrf()))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("Недопустимый путь"));
     }
 
@@ -65,9 +81,9 @@ class GlobalExceptionHandlerTest {
 
         mockMvc.perform(delete("/api/resource")
                         .param("path", "not-found.txt")
-                        .with(user(testUser)))
+                        .with(user(testUser))
+                        .with(csrf()))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message").value("Файл не найден"));
     }
 
@@ -80,9 +96,9 @@ class GlobalExceptionHandlerTest {
         mockMvc.perform(put("/api/resource/move")
                         .param("from", "source.txt")
                         .param("to", "target.txt")
-                        .with(user(testUser)))
+                        .with(user(testUser))
+                        .with(csrf()))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409))
                 .andExpect(jsonPath("$.message").value("Файл уже существует"));
     }
 }

@@ -80,14 +80,18 @@ class DirectoryServiceIntegrationTest {
     @Test
     void shouldListDirectoryContents() {
         directoryService.createDirectory(USER_ID, "test/");
+
+        byte[] content1 = "content1".getBytes(StandardCharsets.UTF_8);
+        byte[] content2 = "content2".getBytes(StandardCharsets.UTF_8);
+
         userStorageWriter.uploadFile(
                 USER_PREFIX + "test/file1.txt",
-                new ByteArrayInputStream("content1".getBytes(StandardCharsets.UTF_8)),
+                new ByteArrayInputStream(content1),
                 "text/plain"
         );
         userStorageWriter.uploadFile(
                 USER_PREFIX + "test/file2.txt",
-                new ByteArrayInputStream("content2".getBytes(StandardCharsets.UTF_8)),
+                new ByteArrayInputStream(content2),
                 "text/plain"
         );
         directoryService.createDirectory(USER_ID, "test/sub/");
@@ -99,10 +103,11 @@ class DirectoryServiceIntegrationTest {
         var file1 = contents.stream().filter(f -> f.name().equals("file1.txt")).findFirst();
         assertThat(file1).isPresent();
         assertThat(file1.get().type()).isEqualTo(FileType.FILE);
-        assertThat(file1.get().size()).isEqualTo(7);
+        assertThat(file1.get().size()).isEqualTo(content1.length);
 
         var file2 = contents.stream().filter(f -> f.name().equals("file2.txt")).findFirst();
         assertThat(file2).isPresent();
+        assertThat(file2.get().size()).isEqualTo(content2.length);
 
         var subdir = contents.stream().filter(f -> f.name().equals("sub/")).findFirst();
         assertThat(subdir).isPresent();
