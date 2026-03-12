@@ -2,18 +2,21 @@ package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.TestcontainersConfiguration;
 import com.frytes.cloudstorage.files.dto.ArchiveStatus;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
-import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
@@ -29,6 +32,9 @@ class ArchiveServiceIntegrationTest {
     @MockitoSpyBean
     private ArchiveListener archiveListener;
 
+    @MockitoBean
+    private SimpMessagingTemplate messagingTemplate;
+
     @Test
     void shouldSendAndReceiveMessage() {
         String path = "photos/vacation";
@@ -38,8 +44,9 @@ class ArchiveServiceIntegrationTest {
 
         String ticketId = archiveService.sendArchivingTask(userId, userName, path, size);
 
-        verify(archiveListener, timeout(5000).atLeastOnce())
-                .listen(argThat(task -> task.ticketId().equals(ticketId)));
+        Awaitility.await().atMost(5, TimeUnit.SECONDS).untilAsserted(() ->
+                verify(archiveListener).listen(argThat(task -> task.ticketId().equals(ticketId)))
+        );
     }
 
     @Test
@@ -51,11 +58,15 @@ class ArchiveServiceIntegrationTest {
 
         String ticketId = archiveService.sendArchivingTask(userId, userName, path, size);
 
-        Map<String, String> status = archiveService.getArchiveStatus(ticketId, userId);
+        Awaitility.await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
+            String redisValue = redisTemplate.opsForValue().get("archive:status:" + ticketId);
+            assertThat(redisValue).isEqualTo("READY");
+        });
 
-        assertThat(status).isNotNull();
-        assertThat(status).containsEntry(ArchiveStatus.STATUS_KEY, ArchiveStatus.IN_PROGRESS.name());
-        String redisValue = redisTemplate.opsForValue().get("archive:status:" + ticketId);
-        assertThat(redisValue).isEqualTo("IN_PROGRESS");
+        Map<String, String> status = archiveService.getArchiveStatus(ticketId, userId);
+        assertThat(status)
+                .isNotNull()
+                .containsEntry(ArchiveStatus.STATUS_KEY, ArchiveStatus.READY.name())
+                .containsKey("downloadUrl");
     }
 }
