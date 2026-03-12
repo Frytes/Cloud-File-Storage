@@ -76,9 +76,10 @@ jobs:
       - name: Run E2E Tests
         run: ./mvnw test -Dtest=*E2ETest
 
-      - name: Auto-Rollback on E2E Failure
+      - name: Print Backend Logs on Failure
         if: failure()
         run: |
+            docker compose logs backend
             git checkout HEAD~1
             ./mvnw clean package -DskipTests
             docker compose down --remove-orphans
