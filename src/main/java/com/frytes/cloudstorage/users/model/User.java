@@ -9,9 +9,7 @@ import java.util.Objects;
 @Table(name = "users")
 @Setter
 @Getter
-@Builder
 @NoArgsConstructor
-@AllArgsConstructor
 public class User {
 
     @Id
@@ -30,6 +28,14 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Provider provider;
+
+    @Builder
+    public User(String username, String password, Role role, Provider provider) {
+        this.username = username;
+        this.password = password;
+        this.role = role;
+        this.provider = provider;
+    }
 
     @Override
     public boolean equals(Object o) {
