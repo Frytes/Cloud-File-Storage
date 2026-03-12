@@ -40,12 +40,19 @@ export const SignIn = () => {
             showInfo("Вход успешно выполнен", 4000);
         } catch (error) {
             switch (true) {
-                case error instanceof UnauthorizedException:
-                case error instanceof NotFoundException:
                 case error instanceof BadRequestException:
-                    showWarn(error.message);
-                    setPassword(''); // Сбрасываем только пароль, чтобы кнопка ожила
-                    break;
+                    if (error.validationErrors) {
+                        if (error.validationErrors.username) setUsernameError(error.validationErrors.username);
+                         if (error.validationErrors.password) setPasswordError(error.validationErrors.password);
+                     } else {
+                         showWarn(error.message);
+                     }
+                     setPassword('');
+                     break;
+                case error instanceof UnauthorizedException:case error instanceof NotFoundException:
+                     showWarn(error.message);
+                     setPassword('');
+                     break;
                 default:
                     showError("Ошибка при попытке входа. Попробуйте позже");
                     console.log('Unknown error occurred! ', error);

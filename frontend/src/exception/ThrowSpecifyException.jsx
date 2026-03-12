@@ -10,7 +10,7 @@ export const throwSpecifyException = (status, detail) => {
 
     switch (status) {
         case 400:
-            throw new BadRequestException(detail.message);
+           throw new BadRequestException(detail.message, detail.validationErrors);
         case 401:
             throw new UnauthorizedException(detail.message);
         case 409:

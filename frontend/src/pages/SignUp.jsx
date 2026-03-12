@@ -44,14 +44,23 @@ export const SignUp = () => {
             login(response);
             showSuccess("Регистрация и вход успешно выполнены", 5000);
         } catch (error) {
-            switch (true) {
-                case error instanceof ForbiddenException:
-                case error instanceof ConflictException:
-                case error instanceof BadRequestException:
-                    showWarn(error.message);
-                    setPassword('');
-                    setConfirmPassword('');
-                    break;
+                    switch (true) {
+                        case error instanceof BadRequestException:
+                            if (error.validationErrors) {
+                                if (error.validationErrors.username) setUsernameError(error.validationErrors.username);
+                                if (error.validationErrors.password) setPasswordError(error.validationErrors.password);
+                            } else {
+                                showWarn(error.message);
+                            }
+                            setPassword('');
+                            setConfirmPassword('');
+                            break;
+                        case error instanceof ForbiddenException:
+                        case error instanceof ConflictException:
+                            showWarn(error.message);
+                            setPassword('');
+                            setConfirmPassword('');
+                            break;
                 default:
                     showError("Не удалось зарегистрироваться. Попробуйте позже");
                     console.log('Unknown error occurred! ', error);
