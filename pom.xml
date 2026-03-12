@@ -166,6 +166,7 @@
 					<excludes>
 						<exclude>**/e2e/**</exclude>
 					</excludes>
+					<forkedProcessExitTimeoutInSeconds>2</forkedProcessExitTimeoutInSeconds>
 				</configuration>
 			</plugin>
 			<plugin>
