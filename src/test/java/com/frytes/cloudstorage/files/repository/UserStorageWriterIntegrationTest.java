@@ -1,8 +1,7 @@
-package com.frytes.cloudstorage.files.service;
+package com.frytes.cloudstorage.files.repository;
 
 import com.frytes.cloudstorage.TestcontainersConfiguration;
 import com.frytes.cloudstorage.config.properties.MinioProperties;
-import com.frytes.cloudstorage.files.repository.UserStorageWriter;
 import io.minio.MinioClient;
 import io.minio.StatObjectArgs;
 import org.junit.jupiter.api.Test;
@@ -14,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
-class MinioServiceIntegrationTest {
+class UserStorageWriterIntegrationTest {
 
     @Autowired
     private UserStorageWriter userStorageWriter;

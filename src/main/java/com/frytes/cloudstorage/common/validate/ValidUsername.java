@@ -10,7 +10,8 @@ import java.lang.annotation.*;
 
 @NotBlank(message = "Имя пользователя не может быть пустым")
 @Size(min = 2, max = 50, message = "Имя должно быть от 2 до 50 символов")
-@Pattern(regexp = "^[^<>&]+$", message = "Имя содержит недопустимые символы")
+@Pattern(regexp = "^[a-zA-Z0-9._-]+$",
+        message = "Имя может содержать только латинские буквы, цифры, точки, подчеркивания и дефисы")
 @Target({ElementType.PARAMETER, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Constraint(validatedBy = {})

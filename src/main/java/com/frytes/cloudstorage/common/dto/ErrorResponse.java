@@ -14,6 +14,10 @@ public record ErrorResponse(
         LocalDateTime timestamp,
         Map<String, String> validationErrors
 ) {
+    public ErrorResponse {
+        validationErrors = validationErrors == null ? null : Map.copyOf(validationErrors);
+    }
+
     public ErrorResponse(int status,
                          String error,
                          String message,

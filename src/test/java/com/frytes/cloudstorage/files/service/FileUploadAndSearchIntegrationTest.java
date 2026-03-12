@@ -1,14 +1,15 @@
 package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.TestcontainersConfiguration;
-import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
 import com.frytes.cloudstorage.files.dto.FileType;
+import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,7 +32,7 @@ class FileUploadAndSearchIntegrationTest {
                 "object",
                 "report.txt",
                 "text/plain",
-                "Hello, Integration Test!".getBytes()
+                "Hello, Integration Test!".getBytes(StandardCharsets.UTF_8)
         );
 
         fileUploadService.uploadFiles(userId, uploadPath, List.of(mockFile));

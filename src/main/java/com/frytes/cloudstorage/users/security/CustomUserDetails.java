@@ -24,12 +24,12 @@ public class CustomUserDetails extends User implements OAuth2User {
     public CustomUserDetails(Long id, String username, String password, Collection<? extends GrantedAuthority> authorities, Map<String, Object> attributes) {
         super(username, password, authorities);
         this.id = id;
-        this.attributes = attributes;
+        this.attributes = attributes == null ? null : Map.copyOf(attributes);
     }
 
     @Override
     public Map<String, Object> getAttributes() {
-        return attributes;
+        return attributes == null ? null : Map.copyOf(attributes);
     }
 
     @Override
