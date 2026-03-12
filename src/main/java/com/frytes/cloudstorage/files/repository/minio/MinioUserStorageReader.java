@@ -91,11 +91,18 @@ public class MinioUserStorageReader implements UserStorageReader {
         for (Result<Item> result : results) {
             try {
                 Item item = result.get();
-                LocalDateTime lastModified = item.lastModified() != null
-                        ? item.lastModified().toLocalDateTime() : null;
+                LocalDateTime lastModified = null;
+                long size = 0L;
 
-                items.add(new StorageItem(item.objectName(), item.isDir(), item.size(), lastModified));
+                if (!item.isDir()) {
+                    if (item.lastModified() != null) {
+                        lastModified = item.lastModified().toLocalDateTime();
+                    }
+                    size = item.size();
+                }
+                items.add(new StorageItem(item.objectName(), item.isDir(), size, lastModified));
             } catch (Exception e) {
+                log.error("MinIO error during listObjects with prefix {}: {}", prefix, e.getMessage());
                 throw new StorageOperationException("Ошибка чтения списка файлов", e);
             }
         }
