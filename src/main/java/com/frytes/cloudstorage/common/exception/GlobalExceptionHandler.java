@@ -57,6 +57,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleConstraintViolation(jakarta.validation.ConstraintViolationException ex, HttpServletRequest request) {
         String message = ex.getConstraintViolations().stream()
                 .map(jakarta.validation.ConstraintViolation::getMessage)
+                .distinct()
                 .collect(Collectors.joining("; "));
 
         log.info("Constraint violation [{}]: {}", request.getRequestURI(), message);

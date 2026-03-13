@@ -7,19 +7,19 @@ public class StoragePathValidator implements ConstraintValidator<ValidStoragePat
 
     @Override
     public boolean isValid(String path, ConstraintValidatorContext context) {
-        if (path == null || path.isBlank()) {
+        if (path == null) {
             return false;
+        }
+        if (path.isEmpty()) {
+            return true; // Пустая строка - это корневая папка (валидный путь)
         }
         if (path.contains("..")) {
-            return false;
+            return false; // Защита от Path Traversal
         }
         if (path.startsWith("/")) {
-            return false;
+            return false; // S3 пути не должны быть абсолютными
         }
-        if (path.contains("//")) {
-            return false;
-        }
-
-        return path.matches("^[a-zA-Z0-9/._-]+$");
+        return !path.contains("//"); // Защита от некорректных путей
+// Разрешаем пробелы, кириллицу и прочие символы
     }
 }

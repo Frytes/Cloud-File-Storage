@@ -24,10 +24,12 @@ class ValidStoragePathTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
+            "",
             "folder/",
             "folder/subfolder/",
             "file.txt",
-            "folder/file.txt",
+            "my file with spaces.txt",
+            "папка/файл (1).txt",
             "folder/subfolder/file.txt",
             "my-document_v2.1.txt"
     })
@@ -41,11 +43,7 @@ class ValidStoragePathTest {
             "../etc/passwd",
             "folder/../file.txt",
             "folder//file.txt",
-            "/absolute/path",
-            "folder/<script>.txt",
-            "",
-            "   ",
-            "folder/with space.txt"
+            "/absolute/path"
     })
     void invalidPathShouldFail(String invalidPath) {
         var violations = validator.validate(new TestRecord(invalidPath));

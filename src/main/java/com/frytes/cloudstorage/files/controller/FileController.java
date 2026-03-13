@@ -43,7 +43,7 @@ public class FileController {
     @Operation(summary = "Получить информацию о файле/папке")
     @GetMapping
     public FileResponseDto getFileInfo(
-            @RequestParam("path") @NotBlank @ValidStoragePath String path,
+            @RequestParam("path") @ValidStoragePath String path,
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails user
     ) {
         return resourceOperationService.getFileInfo(user.getId(), path);
@@ -120,8 +120,8 @@ public class FileController {
     @PutMapping("/move")
     @ResponseStatus(HttpStatus.OK)
     public void moveFile(
-            @RequestParam("from") @NotBlank @ValidStoragePath String from,
-            @RequestParam("to") @NotBlank @ValidStoragePath String to,
+            @RequestParam("from")  @ValidStoragePath String from,
+            @RequestParam("to")  @ValidStoragePath String to,
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails user
     ) {
         resourceOperationService.moveObject(user.getId(), from, to);
@@ -132,7 +132,7 @@ public class FileController {
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteFile(
-            @RequestParam("path") @NotBlank @ValidStoragePath String path,
+            @RequestParam("path")  @ValidStoragePath String path,
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails user
     ) {
         resourceOperationService.deleteObject(user.getId(), path);
