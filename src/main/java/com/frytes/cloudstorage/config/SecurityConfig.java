@@ -1,5 +1,7 @@
 package com.frytes.cloudstorage.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.frytes.cloudstorage.common.dto.ErrorResponse;
 import com.frytes.cloudstorage.config.properties.AppProperties;
 import com.frytes.cloudstorage.users.security.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +16,6 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
@@ -22,6 +23,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Configuration
@@ -47,7 +49,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, CustomOAuth2UserService customOAuth2UserService) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           CustomOAuth2UserService customOAuth2UserService,
+                                           ObjectMapper objectMapper) throws Exception {
         http
                 .csrf((AbstractHttpConfigurer::disable)
                 ).cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -64,7 +68,21 @@ public class SecurityConfig {
                         .successHandler(new SimpleUrlAuthenticationSuccessHandler(appProperties.frontend().url()))
                 )
                 .exceptionHandling(e -> e
-                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.setContentType(org.springframework.http.MediaType.APPLICATION_JSON_VALUE);
+                            response.setCharacterEncoding("UTF-8");
+
+                            ErrorResponse errorResponse = new ErrorResponse(
+                                    HttpStatus.UNAUTHORIZED.value(),
+                                    "Unauthorized",
+                                    "Доступ запрещен. Необходима авторизация.",
+                                    request.getRequestURI(),
+                                    LocalDateTime.now()
+                            );
+
+                            objectMapper.writeValue(response.getOutputStream(), errorResponse);
+                        })
                 );
 
         return http.build();
