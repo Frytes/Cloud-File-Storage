@@ -6,6 +6,9 @@ import com.frytes.cloudstorage.files.dto.response.DownloadResponse;
 import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
 import com.frytes.cloudstorage.files.service.*;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
@@ -23,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "Файлы и Объекты", description = "API для управления файлами и скачивания (Соблюдение строгих REST контрактов)")
 @Validated
 @RestController
 @RequestMapping("/api/resource")
@@ -35,9 +39,7 @@ public class FileController {
     private final SearchService searchService;
     private final ResourceOperationService resourceOperationService;
 
-
-
-
+    @Operation(summary = "Получить информацию о файле/папке")
     @GetMapping
     public FileResponseDto getFileInfo(
             @RequestParam("path") @NotBlank @ValidStoragePath String path,
@@ -46,17 +48,18 @@ public class FileController {
         return resourceOperationService.getFileInfo(user.getId(), path);
     }
 
+    @Operation(summary = "Поиск файлов", description = "Линейный поиск файлов по подстроке в названии")
     @GetMapping("/search")
     public List<FileResponseDto> searchFiles(
             @RequestParam("query")
             @NotBlank(message = "Поисковой запрос не может быть пустым")
             String query,
-
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         return searchService.searchUserFiles(user.getId(), query);
     }
 
+    @Operation(summary = "Скачать файл или папку", description = "Возвращает бинарный поток (файл/zip) или HTTP 202 с тикетом асинхронной сборки")
     @GetMapping("/download")
     public ResponseEntity<Object> downloadFile(
             @RequestParam("path") String path,
@@ -85,6 +88,7 @@ public class FileController {
         };
     }
 
+    @Operation(summary = "Проверить статус сборки архива")
     @GetMapping("/download/status")
     public ResponseEntity<Map<String, String>> checkDownloadStatus(
             @RequestParam("ticket") String ticket,
@@ -100,6 +104,8 @@ public class FileController {
         return ResponseEntity.accepted().body(result);
     }
 
+    @Operation(summary = "Загрузить файлы", description = "Принимает список файлов в формате multipart/form-data")
+    @ApiResponse(responseCode = "201", description = "Файлы успешно загружены")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public void uploadFiles(
@@ -110,6 +116,8 @@ public class FileController {
         fileUploadService.uploadFiles(user.getId(), path, files);
     }
 
+    @Operation(summary = "Переместить или переименовать файл/папку")
+    @ApiResponse(responseCode = "200", description = "Успешное перемещение")
     @PutMapping("/move")
     @ResponseStatus(HttpStatus.OK)
     public void moveFile(
@@ -120,6 +128,8 @@ public class FileController {
         resourceOperationService.moveObject(user.getId(), from, to);
     }
 
+    @Operation(summary = "Удалить файл или папку")
+    @ApiResponse(responseCode = "204", description = "Успешное удаление (без тела ответа)")
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteFile(
