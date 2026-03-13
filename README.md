@@ -97,7 +97,7 @@
 
 4. **Доступ к сервисам:**
     - 🌐 **Веб-интерфейс (Frontend):** http://localhost
-    - 📚 **API Документация (Swagger):** http://localhost:8080/swagger-ui.html
+    - 📚 **API Документация (Swagger):** http://localhost/swagger-ui.html
     - 🪣 **MinIO Console:** http://localhost:9001 (Учетные данные из `.env`)
     - 🐰 **RabbitMQ Management:** http://localhost:15672
 

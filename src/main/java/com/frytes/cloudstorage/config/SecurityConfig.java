@@ -53,6 +53,7 @@ public class SecurityConfig {
                                            CustomOAuth2UserService customOAuth2UserService,
                                            ObjectMapper objectMapper) throws Exception {
         http
+
                 .csrf((AbstractHttpConfigurer::disable)
                 ).cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
@@ -87,14 +88,18 @@ public class SecurityConfig {
 
         return http.build();
     }
-    //TODO Настроить верно
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOriginPatterns(List.of("*"));
-        configuration.setAllowedMethods(List.of("*"));
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedOrigins(List.of(
+                "https://cinema-plus.ru",
+                "https://www.cinema-plus.ru",
+                "http://localhost"
+        ));
+
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "X-XSRF-TOKEN"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
