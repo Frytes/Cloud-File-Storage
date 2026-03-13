@@ -8,7 +8,6 @@ import com.frytes.cloudstorage.users.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -27,7 +26,7 @@ public class AuthController implements AuthApi {
     @PostMapping("/sign-up")
     @ResponseStatus(HttpStatus.CREATED)
     @Override
-    public AuthResponse register(@RequestBody @Valid RegisterRequest request,
+    public AuthResponse register(@RequestBody RegisterRequest request,
                                  HttpServletRequest httpRequest,
                                  HttpServletResponse httpResponse) {
         authService.register(request);
@@ -36,7 +35,7 @@ public class AuthController implements AuthApi {
 
     @PostMapping("/sign-in")
     @Override
-    public AuthResponse login(@RequestBody @Valid LoginRequest request,
+    public AuthResponse login(@RequestBody LoginRequest request,
                               HttpServletRequest httpRequest,
                               HttpServletResponse httpResponse) {
         return authService.authenticateAndCreateSession(request.username(), request.password(), httpRequest, httpResponse);

@@ -1,5 +1,6 @@
 package com.frytes.cloudstorage.files.api;
 
+import com.frytes.cloudstorage.common.validate.ValidStoragePath;
 import com.frytes.cloudstorage.files.dto.response.FileResponse;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,7 +21,8 @@ public interface DirectoryApi {
 
     @Operation(summary = "Создать новую директорию", description = "Создает пустую папку (виртуальный объект) по указанному пути.")
     ResponseEntity<FileResponse> createDirectory(
-            @Parameter(description = "Полный путь новой папки (включая её имя и слэш на конце)", example = "photos/vacation_2024/") String path,
+            @Parameter(description = "Полный путь новой папки (включая её имя и слэш на конце)", example = "photos/vacation_2024/")
+            @ValidStoragePath String path,
             @Parameter(hidden = true) CustomUserDetails user
     );
 }

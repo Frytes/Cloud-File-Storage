@@ -1,13 +1,11 @@
 package com.frytes.cloudstorage.files.controller;
 
-import com.frytes.cloudstorage.common.validate.ValidStoragePath;
 import com.frytes.cloudstorage.files.api.FileApi;
 import com.frytes.cloudstorage.files.dto.ArchiveStatus;
 import com.frytes.cloudstorage.files.dto.response.DownloadResponse;
 import com.frytes.cloudstorage.files.dto.response.FileResponse;
 import com.frytes.cloudstorage.files.service.*;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -15,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,7 +21,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
-@Validated
 @RestController
 @RequestMapping("/api/resource")
 @RequiredArgsConstructor
@@ -39,7 +35,7 @@ public class FileController implements FileApi {
     @GetMapping
     @Override
     public FileResponse getFileInfo(
-            @RequestParam("path") @ValidStoragePath String path,
+            @RequestParam("path") String path,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         return resourceOperationService.getFileInfo(user.getId(), path);
@@ -48,7 +44,7 @@ public class FileController implements FileApi {
     @GetMapping("/search")
     @Override
     public List<FileResponse> searchFiles(
-            @RequestParam("query") @NotBlank(message = "Поисковой запрос не может быть пустым") String query,
+            @RequestParam("query") String query,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         return searchService.searchUserFiles(user.getId(), query);
@@ -68,13 +64,11 @@ public class FileController implements FileApi {
                     "message", "Начата архивация папки",
                     ArchiveStatus.STATUS_KEY, ArchiveStatus.IN_PROGRESS.name()
             ));
-
             case SYNC_ZIP -> buildAttachmentResponse(
                     response.fileName(),
                     "application/zip",
                     response.zipStream()
             );
-
             case SINGLE_FILE -> buildAttachmentResponse(
                     response.fileName(),
                     MediaType.APPLICATION_OCTET_STREAM_VALUE,
@@ -114,8 +108,8 @@ public class FileController implements FileApi {
     @ResponseStatus(HttpStatus.OK)
     @Override
     public void moveFile(
-            @RequestParam("from") @ValidStoragePath String from,
-            @RequestParam("to") @ValidStoragePath String to,
+            @RequestParam("from") String from,
+            @RequestParam("to") String to,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         resourceOperationService.moveObject(user.getId(), from, to);
@@ -125,7 +119,7 @@ public class FileController implements FileApi {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Override
     public void deleteFile(
-            @RequestParam("path") @ValidStoragePath String path,
+            @RequestParam("path") String path,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         resourceOperationService.deleteObject(user.getId(), path);

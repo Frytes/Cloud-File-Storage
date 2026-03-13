@@ -1,5 +1,6 @@
 package com.frytes.cloudstorage.files.api;
 
+import com.frytes.cloudstorage.common.validate.ValidStoragePath;
 import com.frytes.cloudstorage.files.dto.response.FileResponse;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -7,6 +8,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,13 +20,15 @@ public interface FileApi {
 
     @Operation(summary = "Получить метаданные файла/папки")
     FileResponse getFileInfo(
-            @Parameter(description = "Путь к объекту", example = "documents/report.txt") String path,
+            @Parameter(description = "Путь к объекту", example = "documents/report.txt")
+            @ValidStoragePath String path,
             @Parameter(hidden = true) CustomUserDetails user
     );
 
     @Operation(summary = "Поиск файлов", description = "Ищет файлы и папки пользователя по вхождению подстроки в имя объекта (регистронезависимо).")
     List<FileResponse> searchFiles(
-            @Parameter(description = "Текст для поиска", example = "report") String query,
+            @Parameter(description = "Текст для поиска", example = "report")
+            @NotBlank(message = "Поисковой запрос не может быть пустым") String query,
             @Parameter(hidden = true) CustomUserDetails user
     );
 
@@ -55,15 +59,18 @@ public interface FileApi {
     @Operation(summary = "Переместить или переименовать файл/папку")
     @ApiResponse(responseCode = "200", description = "Объект успешно перемещен")
     void moveFile(
-            @Parameter(description = "Текущий путь к объекту", example = "old.txt") String from,
-            @Parameter(description = "Новый путь к объекту", example = "new.txt") String to,
+            @Parameter(description = "Текущий путь к объекту", example = "old.txt")
+            @ValidStoragePath String from,
+            @Parameter(description = "Новый путь к объекту", example = "new.txt")
+            @ValidStoragePath String to,
             @Parameter(hidden = true) CustomUserDetails user
     );
 
     @Operation(summary = "Удалить файл или папку")
     @ApiResponse(responseCode = "204", description = "Объект успешно удален")
     void deleteFile(
-            @Parameter(description = "Путь к удаляемому объекту", example = "report.txt") String path,
+            @Parameter(description = "Путь к удаляемому объекту", example = "report.txt")
+            @ValidStoragePath String path,
             @Parameter(hidden = true) CustomUserDetails user
     );
 }
