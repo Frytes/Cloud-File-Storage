@@ -43,10 +43,10 @@ spring:
     baseline-on-migrate: true
 
   rabbitmq:
-    host: localhost
+    host: ${SPRING_RABBITMQ_HOST:localhost}
     port: 5672
     stomp:
-      host: localhost
+      host: ${SPRING_RABBITMQ_STOMP_HOST:localhost}
       port: 61613
     listener:
       simple:

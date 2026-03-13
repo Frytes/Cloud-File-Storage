@@ -78,6 +78,8 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
+      JAVA_TOOL_OPTIONS: "-Xmx512m -Xms256m"
+
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-cloud_storage}
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-user}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-password}

@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.example</groupId>
-	<artifactId>demo</artifactId>
+	<artifactId>cloude</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Cloud File Storage</name>
 	<description>Cloud File Storage application</description>
