@@ -5,7 +5,7 @@ import java.util.List;
 
 public interface UserStorageWriter {
     void createDirectory(String path);
-    void uploadFile(String path, InputStream inputStream, String contentType);
+    void uploadFile(String path, InputStream inputStream, long size, String contentType);
     void removeObject(String path);
     void removeObjects(List<String> paths);
     void copyObject(String source, String target);

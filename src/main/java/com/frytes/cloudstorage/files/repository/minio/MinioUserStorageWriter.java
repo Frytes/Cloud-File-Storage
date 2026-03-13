@@ -53,14 +53,13 @@ public class MinioUserStorageWriter implements UserStorageWriter {
     }
 
     @Override
-    public void uploadFile(String path, InputStream inputStream, String contentType) {
+    public void uploadFile(String path, InputStream inputStream,long size, String contentType) {
         try {
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(minioProperties.buckets().userFiles())
                             .object(path)
-                            .headers(Map.of(IF_NONE_MATCH_HEADER, "*"))
-                            .stream(inputStream, -1, minioProperties.streamPartSize())
+                            .stream(inputStream, size, minioProperties.streamPartSize())
                             .contentType(contentType)
                             .headers(Map.of(IF_NONE_MATCH_HEADER, "*"))
                             .build()

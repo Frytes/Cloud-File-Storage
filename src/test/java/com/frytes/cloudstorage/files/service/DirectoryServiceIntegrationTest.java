@@ -87,11 +87,13 @@ class DirectoryServiceIntegrationTest {
         userStorageWriter.uploadFile(
                 USER_PREFIX + "test/file1.txt",
                 new ByteArrayInputStream(content1),
+                content1.length,
                 "text/plain"
         );
         userStorageWriter.uploadFile(
                 USER_PREFIX + "test/file2.txt",
                 new ByteArrayInputStream(content2),
+                content2.length,
                 "text/plain"
         );
         directoryService.createDirectory(USER_ID, "test/sub/");

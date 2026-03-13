@@ -49,9 +49,11 @@ class ResourceOperationServiceIntegrationTest {
         String sourcePath = "source.txt";
         String targetPath = "target.txt";
 
+        byte[] content = "test content".getBytes(StandardCharsets.UTF_8);
         userStorageWriter.uploadFile(
                 buildPath(sourcePath),
-                new ByteArrayInputStream("test content".getBytes(StandardCharsets.UTF_8)),
+                new ByteArrayInputStream(content),
+                content.length,
                 "text/plain"
         );
 
@@ -67,15 +69,22 @@ class ResourceOperationServiceIntegrationTest {
         String targetFolder = "target/";
 
         userStorageWriter.createDirectory(buildPath(sourceFolder));
+
+        byte[] content1 = "content1".getBytes(StandardCharsets.UTF_8);
         userStorageWriter.uploadFile(
                 buildPath(sourceFolder + "file1.txt"),
-                new ByteArrayInputStream("content1".getBytes(StandardCharsets.UTF_8)),
+                new ByteArrayInputStream(content1),
+                content1.length,
                 "text/plain"
         );
+
         userStorageWriter.createDirectory(buildPath(sourceFolder + "sub/"));
+
+        byte[] content2 = "content2".getBytes(StandardCharsets.UTF_8);
         userStorageWriter.uploadFile(
                 buildPath(sourceFolder + "sub/file2.txt"),
-                new ByteArrayInputStream("content2".getBytes(StandardCharsets.UTF_8)),
+                new ByteArrayInputStream(content2),
+                content2.length,
                 "text/plain"
         );
 
@@ -95,14 +104,19 @@ class ResourceOperationServiceIntegrationTest {
         String sourcePath = "source.txt";
         String targetPath = "target.txt";
 
+        byte[] sourceContent = "source content".getBytes(StandardCharsets.UTF_8);
         userStorageWriter.uploadFile(
                 buildPath(sourcePath),
-                new ByteArrayInputStream("source content".getBytes(StandardCharsets.UTF_8)),
+                new ByteArrayInputStream(sourceContent),
+                sourceContent.length,
                 "text/plain"
         );
+
+        byte[] targetContent = "target content".getBytes(StandardCharsets.UTF_8);
         userStorageWriter.uploadFile(
                 buildPath(targetPath),
-                new ByteArrayInputStream("target content".getBytes(StandardCharsets.UTF_8)),
+                new ByteArrayInputStream(targetContent),
+                targetContent.length,
                 "text/plain"
         );
 
@@ -114,9 +128,12 @@ class ResourceOperationServiceIntegrationTest {
     @Test
     void shouldDeleteFile() {
         String path = "to-delete.txt";
+
+        byte[] content = "content".getBytes(StandardCharsets.UTF_8);
         userStorageWriter.uploadFile(
                 buildPath(path),
-                new ByteArrayInputStream("content".getBytes(StandardCharsets.UTF_8)),
+                new ByteArrayInputStream(content),
+                content.length,
                 "text/plain"
         );
 
@@ -129,15 +146,22 @@ class ResourceOperationServiceIntegrationTest {
     void shouldDeleteFolderRecursively() {
         String folder = "to-delete/";
         userStorageWriter.createDirectory(buildPath(folder));
+
+        byte[] content1 = "content1".getBytes(StandardCharsets.UTF_8);
         userStorageWriter.uploadFile(
                 buildPath(folder + "file1.txt"),
-                new ByteArrayInputStream("content1".getBytes(StandardCharsets.UTF_8)),
+                new ByteArrayInputStream(content1),
+                content1.length,
                 "text/plain"
         );
+
         userStorageWriter.createDirectory(buildPath(folder + "sub/"));
+
+        byte[] content2 = "content2".getBytes(StandardCharsets.UTF_8);
         userStorageWriter.uploadFile(
                 buildPath(folder + "sub/file2.txt"),
-                new ByteArrayInputStream("content2".getBytes(StandardCharsets.UTF_8)),
+                new ByteArrayInputStream(content2),
+                content2.length,
                 "text/plain"
         );
 
@@ -151,17 +175,19 @@ class ResourceOperationServiceIntegrationTest {
     @Test
     void shouldGetFileInfo() {
         String path = "info.txt";
-        String content = "test content";
+        byte[] content = "test content".getBytes(StandardCharsets.UTF_8);
+
         userStorageWriter.uploadFile(
                 buildPath(path),
-                new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)),
+                new ByteArrayInputStream(content),
+                content.length,
                 "text/plain"
         );
 
         var fileInfo = resourceOperationService.getFileInfo(USER_ID, path);
 
         assertThat(fileInfo.name()).isEqualTo("info.txt");
-        assertThat(fileInfo.size()).isEqualTo(content.length());
+        assertThat(fileInfo.size()).isEqualTo(content.length);
         assertThat(fileInfo.type()).isEqualTo(FileType.FILE);
     }
 }

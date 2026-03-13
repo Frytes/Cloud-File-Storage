@@ -34,7 +34,7 @@ public class FileUploadService {
 
 
             try (InputStream is = file.getInputStream()) {
-                userStorageWriter.uploadFile(objectName, is, file.getContentType());
+                userStorageWriter.uploadFile(objectName, is,file.getSize(), file.getContentType());
             } catch (Exception e) {
                 log.error("Upload failed for file: {}", originalFilename, e);
                 throw new FileUploadException("Не удалось сохранить файл " + originalFilename, e);
