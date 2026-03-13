@@ -59,10 +59,10 @@ public class ArchiveListener {
     public void listen(ArchiveTask task) {
         log.info("[Ticket: {}] Starting asynchronous archiving", task.ticketId());
 
-        String redisKey = "archive:status:" + task.ticketId();
+        String redisKey = ArchiveService.getRedisKey(task.ticketId());
         redisTemplate.expire(redisKey, appProperties.archive().expirationHours(), TimeUnit.HOURS);
 
-        String archiveName = "user-" + task.userId() + "-files/archive-" + task.ticketId() + ".zip";
+        String archiveName = PathUtils.getRootPrefix(task.userId()) + "archive-" + task.ticketId() + ".zip";
 
         String sourcePrefix = PathUtils.ensureTrailingSlash(
                 PathUtils.buildUserPath(task.userId(), PathUtils.sanitize(task.path()))

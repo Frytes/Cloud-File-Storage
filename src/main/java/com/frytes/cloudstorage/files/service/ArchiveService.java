@@ -37,10 +37,16 @@ public class ArchiveService {
     private final ArchiveStorageRepository archiveStorageRepository;
     private final UserStorageReader userStorageReader;
 
+    public static final String REDIS_STATUS_PREFIX = "archive:status:";
+
+    public static String getRedisKey(String ticketId) {
+        return REDIS_STATUS_PREFIX + ticketId;
+    }
+
     public String sendArchivingTask(Long userId, String username, String path, Long totalSize) {
         String ticketId = UUID.randomUUID().toString();
 
-        String redisKey = "archive:status:" + ticketId;
+        String redisKey = getRedisKey(ticketId);
 
         redisTemplate.opsForValue().set(
                 redisKey,
@@ -68,7 +74,7 @@ public class ArchiveService {
     }
 
     public Map<String, String> getArchiveStatus(String ticket, Long userId) {
-        String redisKey = "archive:status:" + ticket;
+        String redisKey = getRedisKey(ticket);
         String statusStr = redisTemplate.opsForValue().get(redisKey);
 
         if (statusStr == null) {
@@ -84,7 +90,7 @@ public class ArchiveService {
         }
 
         if (status == ArchiveStatus.READY) {
-            String archiveName = "user-" + userId + "-files/archive-" + ticket + ".zip";
+            String archiveName = PathUtils.getRootPrefix(userId) + "archive-" + ticket + ".zip";
             String url = archiveStorageRepository.getPresignedUrl(archiveName);
             return status.toResponse(url, appProperties.archive().expirationHours() * 3600);
         }

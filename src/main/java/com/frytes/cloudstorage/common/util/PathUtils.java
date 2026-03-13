@@ -6,6 +6,12 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class PathUtils {
 
+    public static final String USER_PREFIX_TEMPLATE = "user-%d-files/";
+
+    public static String getRootPrefix(Long userId) {
+        return String.format(USER_PREFIX_TEMPLATE, userId);
+    }
+
     public static String sanitize(String path) {
         if (path == null || path.isBlank()) {
             return "";
@@ -26,6 +32,7 @@ public class PathUtils {
         }
         return path;
     }
+
     public static String replacePrefix(String fullPath, String oldPrefix, String newPrefix) {
         return fullPath.replaceFirst(
                 java.util.regex.Pattern.quote(oldPrefix),
@@ -34,7 +41,15 @@ public class PathUtils {
     }
 
     public static String buildUserPath(Long userId, String path) {
-        return "user-" + userId + "-files/" + path;
+        String rootPrefix = getRootPrefix(userId);
+        String cleanPath = sanitize(path);
+        String fullPath = rootPrefix + cleanPath;
+
+        if (!fullPath.startsWith(rootPrefix)) {
+            throw new InvalidPathException("Критическая ошибка: Попытка выхода за пределы пользовательской директории");
+        }
+
+        return fullPath;
     }
 
     public static String getFileNameFromPath(String path) {

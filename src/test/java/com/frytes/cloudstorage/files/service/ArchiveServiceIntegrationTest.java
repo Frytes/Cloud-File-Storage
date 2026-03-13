@@ -59,7 +59,7 @@ class ArchiveServiceIntegrationTest {
         String ticketId = archiveService.sendArchivingTask(userId, userName, path, size);
 
         Awaitility.await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
-            String redisValue = redisTemplate.opsForValue().get("archive:status:" + ticketId);
+            String redisValue = redisTemplate.opsForValue().get(ArchiveService.getRedisKey(ticketId));
             assertThat(redisValue).isEqualTo("READY");
         });
 

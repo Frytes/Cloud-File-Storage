@@ -28,7 +28,6 @@ public class MinioUserStorageWriter implements UserStorageWriter {
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
 
-
     @Override
     public void createDirectory(String path) {
         try {
@@ -53,7 +52,7 @@ public class MinioUserStorageWriter implements UserStorageWriter {
     }
 
     @Override
-    public void uploadFile(String path, InputStream inputStream,long size, String contentType) {
+    public void uploadFile(String path, InputStream inputStream, long size, String contentType) {
         try {
             minioClient.putObject(
                     PutObjectArgs.builder()
@@ -71,8 +70,35 @@ public class MinioUserStorageWriter implements UserStorageWriter {
             log.error("Failed to upload file to MinIO. Path: {}", path, e);
             throw new FileUploadException("Ошибка загрузки файла", e);
         } catch (Exception e) {
+            if (isConnectionClosedByServer(e) && checkIfExistsFallback(path)) {
+                    throw new ResourceAlreadyExistsException("Файл с таким именем уже существует");
+                }
+
             log.error("Failed to upload file to MinIO. Path: {}", path, e);
             throw new FileUploadException("Ошибка загрузки файла", e);
+        }
+    }
+
+    private boolean isConnectionClosedByServer(Exception e) {
+        String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+        Throwable cause = e.getCause();
+        boolean isEof = cause instanceof java.io.EOFException;
+        boolean isUnexpectedEnd = msg.contains("unexpected end of stream") ||
+                (cause != null && cause.getMessage() != null && cause.getMessage().contains("unexpected end of stream"));
+        return isEof || isUnexpectedEnd;
+    }
+
+    private boolean checkIfExistsFallback(String path) {
+        try {
+            minioClient.statObject(
+                    StatObjectArgs.builder()
+                            .bucket(minioProperties.buckets().userFiles())
+                            .object(path)
+                            .build()
+            );
+            return true;
+        } catch (Exception ex) {
+            return false;
         }
     }
 
