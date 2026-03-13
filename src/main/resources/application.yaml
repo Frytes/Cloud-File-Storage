@@ -53,6 +53,12 @@ spring:
         concurrency: 5
         max-concurrency: 10
         prefetch: 1
+        default-requeue-rejected: false # После исчерпания попыток кидаем в DLQ
+        retry:
+          enabled: true
+          initial-interval: 2000ms # Время базового ожидания между попытками
+          max-attempts: 3          # Количество попыток отправить
+          multiplier: 2.0          # Каждая следующая попытка ждет в 2 раза дольше (2с, 4с)
     username: ${RABBITMQ_USER:guest}
     password: ${RABBITMQ_PASSWORD:guest}
 

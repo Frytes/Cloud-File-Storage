@@ -5,6 +5,7 @@ import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
 import com.frytes.cloudstorage.files.service.DirectoryService;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +28,7 @@ public class DirectoryController {
     @GetMapping
     public List<FileResponseDto> getAllDirectory(
             @RequestParam("path") String path,
-            @AuthenticationPrincipal CustomUserDetails user
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails user
     ) {
         return directoryService.getAllDirectory(user.getId(), path);
     }
@@ -36,7 +37,7 @@ public class DirectoryController {
     @PostMapping
     public ResponseEntity<FileResponseDto> createDirectory(
             @RequestParam("path") @ValidStoragePath String path,
-            @AuthenticationPrincipal CustomUserDetails user
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails user
     ) {
         FileResponseDto newDirectory = directoryService.createDirectory(user.getId(), path);
         return ResponseEntity.ok(newDirectory);

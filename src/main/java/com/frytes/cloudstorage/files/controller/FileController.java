@@ -7,6 +7,7 @@ import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
 import com.frytes.cloudstorage.files.service.*;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
@@ -43,7 +44,7 @@ public class FileController {
     @GetMapping
     public FileResponseDto getFileInfo(
             @RequestParam("path") @NotBlank @ValidStoragePath String path,
-            @AuthenticationPrincipal CustomUserDetails user
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails user
     ) {
         return resourceOperationService.getFileInfo(user.getId(), path);
     }
@@ -51,10 +52,8 @@ public class FileController {
     @Operation(summary = "Поиск файлов", description = "Линейный поиск файлов по подстроке в названии")
     @GetMapping("/search")
     public List<FileResponseDto> searchFiles(
-            @RequestParam("query")
-            @NotBlank(message = "Поисковой запрос не может быть пустым")
-            String query,
-            @AuthenticationPrincipal CustomUserDetails user
+            @RequestParam("query") @NotBlank(message = "Поисковой запрос не может быть пустым") String query,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails user
     ) {
         return searchService.searchUserFiles(user.getId(), query);
     }
@@ -63,7 +62,7 @@ public class FileController {
     @GetMapping("/download")
     public ResponseEntity<Object> downloadFile(
             @RequestParam("path") String path,
-            @AuthenticationPrincipal CustomUserDetails user
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails user
     ) {
         DownloadResponse response = fileDownloadService.processDownload(user.getId(), user.getUsername(), path);
 
@@ -92,7 +91,7 @@ public class FileController {
     @GetMapping("/download/status")
     public ResponseEntity<Map<String, String>> checkDownloadStatus(
             @RequestParam("ticket") String ticket,
-            @AuthenticationPrincipal CustomUserDetails user
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails user
     ) {
         Map<String, String> result = archiveService.getArchiveStatus(ticket, user.getId());
 
@@ -111,7 +110,7 @@ public class FileController {
     public void uploadFiles(
             @RequestParam("path") String path,
             @RequestParam("object") List<MultipartFile> files,
-            @AuthenticationPrincipal CustomUserDetails user
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails user
     ) {
         fileUploadService.uploadFiles(user.getId(), path, files);
     }
@@ -123,7 +122,7 @@ public class FileController {
     public void moveFile(
             @RequestParam("from") @NotBlank @ValidStoragePath String from,
             @RequestParam("to") @NotBlank @ValidStoragePath String to,
-            @AuthenticationPrincipal CustomUserDetails user
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails user
     ) {
         resourceOperationService.moveObject(user.getId(), from, to);
     }
@@ -134,7 +133,7 @@ public class FileController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteFile(
             @RequestParam("path") @NotBlank @ValidStoragePath String path,
-            @AuthenticationPrincipal CustomUserDetails user
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails user
     ) {
         resourceOperationService.deleteObject(user.getId(), path);
     }
