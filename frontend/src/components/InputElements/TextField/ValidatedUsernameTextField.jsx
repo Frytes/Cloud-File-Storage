@@ -17,20 +17,17 @@ export default function ValidatedUsernameTextField({
     const namePattern = RegExp(window.APP_CONFIG.validUsername.pattern);
 
     const validateUsername = (value) => {
-
         let isValid = true;
         let errMessage = '';
 
-        if (value && value.length < 5 && shouldValidate) {
-            errMessage = 'Минимальная длина имени пользователя ' + minLength + ' символов. ';
+        if (value && value.length < minLength && shouldValidate) {
+            errMessage = 'Минимальная длина имени пользователя ' + minLength + ' символов.';
             isValid = false;
-        }
-        if (value && !namePattern.test(value) && shouldValidate) {
-            errMessage += 'Недопустимые символы в имени пользователя. ';
+        } else if (value && value.length > maxLength && shouldValidate) {
+            errMessage = 'Максимальная длина имени пользователя: ' + maxLength + ' символов.';
             isValid = false;
-        }
-        if (value && value.length > 20 && shouldValidate) {
-            errMessage += 'Максимальная длина имени пользователя: ' + maxLength + ' символов. ';
+        } else if (value && !namePattern.test(value) && shouldValidate) {
+            errMessage = 'Недопустимые символы в имени пользователя.';
             isValid = false;
         }
 

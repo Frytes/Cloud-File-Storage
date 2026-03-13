@@ -2,7 +2,7 @@ package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.TestcontainersConfiguration;
 import com.frytes.cloudstorage.files.dto.FileType;
-import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
+import com.frytes.cloudstorage.files.dto.response.FileResponse;
 import com.frytes.cloudstorage.files.model.StorageItem;
 import com.frytes.cloudstorage.files.repository.UserStorageReader;
 import com.frytes.cloudstorage.files.repository.UserStorageWriter;
@@ -54,10 +54,10 @@ class FileUploadAndSearchIntegrationTest {
         );
 
         fileUploadService.uploadFiles(USER_ID, uploadPath, List.of(mockFile));
-        List<FileResponseDto> foundFiles = searchService.searchUserFiles(USER_ID, "report");
+        List<FileResponse> foundFiles = searchService.searchUserFiles(USER_ID, "report");
 
         assertThat(foundFiles).hasSize(1);
-        FileResponseDto savedFile = foundFiles.getFirst();
+        FileResponse savedFile = foundFiles.getFirst();
 
         assertThat(savedFile.name()).isEqualTo("report.txt");
         assertThat(savedFile.path()).isEqualTo("documents/work/report.txt");

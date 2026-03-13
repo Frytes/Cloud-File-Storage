@@ -18,15 +18,13 @@ export default function ValidatedPasswordField({
         let errMessage = '';
 
         if (value && value.length < minLength && shouldValidate) {
-            errMessage = 'Минимальная длина пароля ' + minLength + ' символов. ';
+            errMessage = 'Минимальная длина пароля ' + minLength + ' символов.';
             isValid = false;
-        }
-        if (value && !passwordPattern.test(value) && shouldValidate) {
-            errMessage += 'Недопустимые символы в пароле ';
+        } else if (value && value.length > maxLength && shouldValidate) {
+            errMessage = 'Максимальная длина пароля: ' + maxLength + ' символов.';
             isValid = false;
-        }
-        if (value && value.length > maxLength && shouldValidate) {
-            errMessage += 'Максимальная длина пароля: ' + maxLength + ' символов. ';
+        } else if (value && !passwordPattern.test(value) && shouldValidate) {
+            errMessage = 'Недопустимые символы в пароле.';
             isValid = false;
         }
 
@@ -36,7 +34,6 @@ export default function ValidatedPasswordField({
             setPasswordError(errMessage);
         }
         setPassword(value);
-
     }
 
     useEffect(() => {

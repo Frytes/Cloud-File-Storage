@@ -7,7 +7,7 @@ import lombok.Builder;
 
 @Builder
 @Schema(description = "Информация о файле или директории в облачном хранилище")
-public record FileResponseDto(
+public record FileResponse(
         @Schema(description = "Имя объекта", example = "report.txt")
         String name,
 

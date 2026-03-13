@@ -11,15 +11,14 @@ public class StoragePathValidator implements ConstraintValidator<ValidStoragePat
             return false;
         }
         if (path.isEmpty()) {
-            return true; // Пустая строка - это корневая папка (валидный путь)
+            return true;
         }
         if (path.contains("..")) {
-            return false; // Защита от Path Traversal
+            return false;
         }
         if (path.startsWith("/")) {
-            return false; // S3 пути не должны быть абсолютными
+            return false;
         }
-        return !path.contains("//"); // Защита от некорректных путей
-// Разрешаем пробелы, кириллицу и прочие символы
+        return !path.contains("//");
     }
 }

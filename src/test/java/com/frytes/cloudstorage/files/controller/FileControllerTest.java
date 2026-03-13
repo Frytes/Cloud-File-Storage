@@ -1,7 +1,7 @@
 package com.frytes.cloudstorage.files.controller;
 
 import com.frytes.cloudstorage.files.dto.FileType;
-import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
+import com.frytes.cloudstorage.files.dto.response.FileResponse;
 import com.frytes.cloudstorage.files.service.*;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,7 +67,7 @@ class FileControllerTest {
     @Test
     @WithMockUser
     void shouldGetFileInfo() throws Exception {
-        FileResponseDto response = FileResponseDto.builder()
+        FileResponse response = FileResponse.builder()
                 .name("test.txt")
                 .size(100L)
                 .type(FileType.FILE)
@@ -89,9 +89,9 @@ class FileControllerTest {
     @Test
     @WithMockUser
     void shouldSearchFiles() throws Exception {
-        List<FileResponseDto> response = List.of(
-                FileResponseDto.builder().name("test1.txt").size(100L).type(FileType.FILE).path("test1.txt").build(),
-                FileResponseDto.builder().name("test2.txt").size(200L).type(FileType.FILE).path("test2.txt").build()
+        List<FileResponse> response = List.of(
+                FileResponse.builder().name("test1.txt").size(100L).type(FileType.FILE).path("test1.txt").build(),
+                FileResponse.builder().name("test2.txt").size(200L).type(FileType.FILE).path("test2.txt").build()
         );
 
         when(searchService.searchUserFiles(1L, "test")).thenReturn(response);

@@ -21,23 +21,16 @@ export default function ValidatedFileName({
         let errMessage = '';
 
         if (value && value.length === 0) {
-            errMessage = 'Имя не должно быть пустым. ';
+            errMessage = 'Имя не должно быть пустым.';
             isValid = false;
-        }
-
-        if (value && value.length < minLength) {
-            errMessage = 'Минимальная длина имени ' + minLength + ' символов. ';
+        } else if (value && value.length < minLength) {
+            errMessage = 'Минимальная длина имени ' + minLength + ' символов.';
             isValid = false;
-        }
-
-
-        if (value && value.length > maxLength) {
-            errMessage += 'Максимальная длина имени ' + maxLength + ' символов. ';
+        } else if (value && value.length > maxLength) {
+            errMessage = 'Максимальная длина имени ' + maxLength + ' символов.';
             isValid = false;
-        }
-
-        if (value && !folderPattern.test(value)) {
-            errMessage += 'Недопустимые символы в имени. ';
+        } else if (value && !folderPattern.test(value)) {
+            errMessage = 'Недопустимые символы в имени.';
             isValid = false;
         }
 

@@ -1,7 +1,7 @@
 package com.frytes.cloudstorage.files.controller;
 
 import com.frytes.cloudstorage.files.dto.FileType;
-import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
+import com.frytes.cloudstorage.files.dto.response.FileResponse;
 import com.frytes.cloudstorage.files.service.DirectoryService;
 import com.frytes.cloudstorage.users.security.CustomUserDetails;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,9 +50,9 @@ class DirectoryControllerTest {
     @Test
     @WithMockUser
     void shouldGetAllDirectory() throws Exception {
-        List<FileResponseDto> response = List.of(
-                FileResponseDto.builder().name("file1.txt").size(100L).type(FileType.FILE).path("folder/").build(),
-                FileResponseDto.builder().name("subfolder/").size(0L).type(FileType.DIRECTORY).path("folder/").build()
+        List<FileResponse> response = List.of(
+                FileResponse.builder().name("file1.txt").size(100L).type(FileType.FILE).path("folder/").build(),
+                FileResponse.builder().name("subfolder/").size(0L).type(FileType.DIRECTORY).path("folder/").build()
         );
 
         when(directoryService.getAllDirectory(1L, "folder/")).thenReturn(response);
@@ -69,7 +69,7 @@ class DirectoryControllerTest {
     @Test
     @WithMockUser
     void shouldCreateDirectory() throws Exception {
-        FileResponseDto response = FileResponseDto.builder()
+        FileResponse response = FileResponse.builder()
                 .name("newfolder/")
                 .size(0L)
                 .type(FileType.DIRECTORY)
