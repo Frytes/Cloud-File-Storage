@@ -59,6 +59,7 @@ jobs:
           echo "MINIO_EXTERNAL_URL=${{ secrets.MINIO_EXTERNAL_URL }}" >> .env
           echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
           echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+          echo "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" >> .env
 
       - name: Docker Compose Up
         run: |
