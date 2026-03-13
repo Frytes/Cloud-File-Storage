@@ -68,10 +68,12 @@ public class ArchiveListener {
                 PathUtils.buildUserPath(task.userId(), PathUtils.sanitize(task.path()))
         );
 
+        CompletableFuture<Void> zipFuture = null;
+
         try (PipedInputStream pipedIn = new PipedInputStream(appProperties.archive().bufferSizeBytes());
              PipedOutputStream pipedOut = new PipedOutputStream(pipedIn)) {
 
-            CompletableFuture<Void> zipFuture = CompletableFuture.runAsync(() -> {
+            zipFuture = CompletableFuture.runAsync(() -> {
                 try (ZipOutputStream zipOut = new ZipOutputStream(pipedOut)) {
                     zipOut.setLevel(Deflater.NO_COMPRESSION);
                     List<StorageItem> results = userStorageReader.listObjects(sourcePrefix, true);
@@ -104,7 +106,7 @@ public class ArchiveListener {
             String downloadUrl = archiveStorageRepository.getPresignedUrl(archiveName);
             sendWebSocketMessage(task, ArchiveStatus.READY.name(), "downloadUrl", downloadUrl);
 
-        }  catch (InterruptedException e) {
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("[Ticket: {}] Archiving process was interrupted", task.ticketId(), e);
             handleError(task, redisKey);
@@ -114,6 +116,11 @@ public class ArchiveListener {
         } catch (Exception e) {
             log.error("[Ticket: {}] Unexpected error during archiving", task.ticketId(), e);
             handleError(task, redisKey);
+        } finally {
+            if (zipFuture != null && !zipFuture.isDone()) {
+                log.warn("[Ticket: {}] Cancelling running zip task due to main thread exit", task.ticketId());
+                zipFuture.cancel(true);
+            }
         }
     }
 
