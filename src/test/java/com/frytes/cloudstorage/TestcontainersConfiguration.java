@@ -19,8 +19,19 @@ public class TestcontainersConfiguration {
 	}
 	@Bean
 	@ServiceConnection
+	@SuppressWarnings("resource")
 	RabbitMQContainer rabbitContainer() {
-		return new RabbitMQContainer(DockerImageName.parse("rabbitmq:3-management"));
+		return new RabbitMQContainer(DockerImageName.parse("rabbitmq:3-management-alpine"))
+				.withExposedPorts(5672, 15672, 61613)
+				.withCommand("sh", "-c", "rabbitmq-plugins enable --offline rabbitmq_stomp && rabbitmq-server");
+	}
+
+	@Bean
+	DynamicPropertyRegistrar rabbitProperties(RabbitMQContainer rabbitContainer) {
+		return registry -> {
+			registry.add("spring.rabbitmq.stomp.host", rabbitContainer::getHost);
+			registry.add("spring.rabbitmq.stomp.port", () -> rabbitContainer.getMappedPort(61613));
+		};
 	}
 
 	@Bean
