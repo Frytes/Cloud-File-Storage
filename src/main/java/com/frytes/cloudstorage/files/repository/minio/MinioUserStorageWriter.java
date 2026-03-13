@@ -2,10 +2,12 @@ package com.frytes.cloudstorage.files.repository.minio;
 
 import com.frytes.cloudstorage.common.exception.DirectoryCreationException;
 import com.frytes.cloudstorage.common.exception.FileUploadException;
+import com.frytes.cloudstorage.common.exception.ResourceAlreadyExistsException;
 import com.frytes.cloudstorage.common.exception.StorageOperationException;
 import com.frytes.cloudstorage.config.properties.MinioProperties;
 import com.frytes.cloudstorage.files.repository.UserStorageWriter;
 import io.minio.*;
+import io.minio.errors.ErrorResponseException;
 import io.minio.messages.DeleteError;
 import io.minio.messages.DeleteObject;
 import lombok.RequiredArgsConstructor;
@@ -15,12 +17,14 @@ import org.springframework.stereotype.Repository;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Repository
 @RequiredArgsConstructor
 public class MinioUserStorageWriter implements UserStorageWriter {
 
+    private static final String IF_NONE_MATCH_HEADER = "If-None-Match";
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
 
@@ -32,9 +36,16 @@ public class MinioUserStorageWriter implements UserStorageWriter {
                     PutObjectArgs.builder()
                             .bucket(minioProperties.buckets().userFiles())
                             .object(path)
+                            .headers(Map.of(IF_NONE_MATCH_HEADER, "*"))
                             .stream(new ByteArrayInputStream(new byte[0]), 0, -1)
                             .build()
             );
+        } catch (ErrorResponseException e) {
+            if ("PreconditionFailed".equals(e.errorResponse().code())) {
+                throw new ResourceAlreadyExistsException("Папка уже существует");
+            }
+            log.error("Failed to create directory in MinIO. Path: {}", path, e);
+            throw new DirectoryCreationException("Ошибка при создании папки", e);
         } catch (Exception e) {
             log.error("Failed to create directory in MinIO. Path: {}", path, e);
             throw new DirectoryCreationException("Ошибка при создании папки", e);
@@ -48,10 +59,18 @@ public class MinioUserStorageWriter implements UserStorageWriter {
                     PutObjectArgs.builder()
                             .bucket(minioProperties.buckets().userFiles())
                             .object(path)
+                            .headers(Map.of(IF_NONE_MATCH_HEADER, "*"))
                             .stream(inputStream, -1, minioProperties.streamPartSize())
                             .contentType(contentType)
+                            .headers(Map.of(IF_NONE_MATCH_HEADER, "*"))
                             .build()
             );
+        } catch (ErrorResponseException e) {
+            if ("PreconditionFailed".equals(e.errorResponse().code())) {
+                throw new ResourceAlreadyExistsException("Файл с таким именем уже существует");
+            }
+            log.error("Failed to upload file to MinIO. Path: {}", path, e);
+            throw new FileUploadException("Ошибка загрузки файла", e);
         } catch (Exception e) {
             log.error("Failed to upload file to MinIO. Path: {}", path, e);
             throw new FileUploadException("Ошибка загрузки файла", e);
@@ -87,10 +106,19 @@ public class MinioUserStorageWriter implements UserStorageWriter {
                             .build()
             );
 
+            List<String> failedDeletes = new java.util.ArrayList<>();
             for (Result<DeleteError> result : results) {
                 DeleteError error = result.get();
                 log.error("Failed to delete object in batch. Object: {}, Error: {}", error.objectName(), error.message());
+                failedDeletes.add(error.objectName());
             }
+
+            if (!failedDeletes.isEmpty()) {
+                throw new StorageOperationException("Не удалось удалить следующие файлы: " + String.join(", ", failedDeletes));
+            }
+
+        } catch (StorageOperationException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to execute batch remove in MinIO.", e);
             throw new StorageOperationException("Ошибка при массовом удалении файлов", e);

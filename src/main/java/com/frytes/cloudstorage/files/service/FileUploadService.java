@@ -1,9 +1,7 @@
 package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.common.exception.FileUploadException;
-import com.frytes.cloudstorage.common.exception.ResourceAlreadyExistsException;
 import com.frytes.cloudstorage.common.util.PathUtils;
-import com.frytes.cloudstorage.files.repository.UserStorageReader;
 import com.frytes.cloudstorage.files.repository.UserStorageWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +16,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FileUploadService {
 
-    private final UserStorageReader userStorageReader;
     private final UserStorageWriter userStorageWriter;
 
     public void uploadFiles(Long userId, String path, List<MultipartFile> files) {
@@ -35,10 +32,6 @@ public class FileUploadService {
             String fullPath = directoryPath + originalFilename;
             String objectName = PathUtils.buildUserPath(userId, fullPath);
 
-            if (userStorageReader.isObjectExist(objectName)) {
-                log.warn("Upload failed: File '{}' already exists for user {}", originalFilename, userId);
-                throw new ResourceAlreadyExistsException("Файл " + originalFilename + " уже существует");
-            }
 
             try (InputStream is = file.getInputStream()) {
                 userStorageWriter.uploadFile(objectName, is, file.getContentType());

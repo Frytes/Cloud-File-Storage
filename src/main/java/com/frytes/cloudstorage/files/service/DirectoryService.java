@@ -1,10 +1,9 @@
 package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.common.exception.InvalidPathException;
-import com.frytes.cloudstorage.common.exception.ResourceAlreadyExistsException;
 import com.frytes.cloudstorage.common.util.PathUtils;
-import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
 import com.frytes.cloudstorage.files.dto.FileType;
+import com.frytes.cloudstorage.files.dto.response.FileResponseDto;
 import com.frytes.cloudstorage.files.model.StorageItem;
 import com.frytes.cloudstorage.files.repository.UserStorageReader;
 import com.frytes.cloudstorage.files.repository.UserStorageWriter;
@@ -50,11 +49,6 @@ public class DirectoryService {
 
         String processedPath = PathUtils.ensureTrailingSlash(cleanPath);
         String objectName = PathUtils.buildUserPath(userId, processedPath);
-
-        if (userStorageReader.isObjectExist(objectName)) {
-            log.warn("Directory creation failed: Path '{}' already exists for user {}", cleanPath, userId);
-            throw new ResourceAlreadyExistsException("Папка с таким именем уже существует");
-        }
 
         userStorageWriter.createDirectory(objectName);
 
