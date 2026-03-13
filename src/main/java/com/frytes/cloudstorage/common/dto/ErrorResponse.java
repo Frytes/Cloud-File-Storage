@@ -9,10 +9,10 @@ import java.util.Map;
 @Schema(description = "Стандартный формат ответа при возникновении ошибки")
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public record ErrorResponse(
-        @Schema(description = "HTTP статус код", example = "400")
+        @Schema(description = "HTTP статус код (например: 400, 401, 404)")
         int status,
 
-        @Schema(description = "Тип ошибки", example = "Bad Request")
+        @Schema(description = "Тип ошибки (например: Bad Request, Not Found)")
         String error,
 
         @Schema(description = "Подробное сообщение об ошибке", example = "Недопустимый формат пути")
