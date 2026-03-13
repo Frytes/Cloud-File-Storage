@@ -1,8 +1,13 @@
 package com.frytes.cloudstorage.files.service;
 
 import com.frytes.cloudstorage.TestcontainersConfiguration;
+import com.frytes.cloudstorage.config.properties.MinioProperties;
 import com.frytes.cloudstorage.files.dto.ArchiveStatus;
+import io.minio.BucketExistsArgs;
+import io.minio.MakeBucketArgs;
+import io.minio.MinioClient;
 import org.awaitility.Awaitility;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,11 +34,30 @@ class ArchiveServiceIntegrationTest {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
+    @Autowired
+    private MinioClient minioClient;
+
+    @Autowired
+    private MinioProperties minioProperties;
+
     @MockitoSpyBean
     private ArchiveListener archiveListener;
 
     @MockitoBean
     private SimpMessagingTemplate messagingTemplate;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        String userBucket = minioProperties.buckets().userFiles();
+        String tempBucket = minioProperties.buckets().tempArchives();
+
+        if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(userBucket).build())) {
+            minioClient.makeBucket(MakeBucketArgs.builder().bucket(userBucket).build());
+        }
+        if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(tempBucket).build())) {
+            minioClient.makeBucket(MakeBucketArgs.builder().bucket(tempBucket).build());
+        }
+    }
 
     @Test
     void shouldSendAndReceiveMessage() {
